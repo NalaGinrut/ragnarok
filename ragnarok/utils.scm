@@ -16,7 +16,11 @@
 (define-module (ragnarok utils)
   #:export (make-counter
 	    make-cursor-for
-	    exchange)
+	    exchange
+	    unless 
+	    exchange 
+	    get-arg
+	    add-to-list!)
   )
 
 (define-syntax unless
@@ -58,3 +62,11 @@
   (syntax-rules ()
     ((_ args which)
      (car (assoc-ref args which)))))
+
+(define-syntax add-to-list! 
+  (syntax-rules ()
+    ((_ a k v)
+     (set! a
+	   (apply assoc-set! `(,a 
+			       k 
+			       ,v))))))

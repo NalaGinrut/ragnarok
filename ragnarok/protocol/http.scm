@@ -13,29 +13,30 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (ragnarok handler)
-  #:use-module (ragnarok utils)
-  #:export (get-handler 
-	    handler-register
-	    *handler-list*)
+(define-module (ragnarok protocol http)
+  #:use-module (ragnarok handler)
+  #:export (http-handler
+	    http-static-page-req-handler
+	    http-request-handler)
   )
 
-(define *handler-list* '())
+;;(handler-register http-handler)
+(define http-handler
+  (lambda ()
+    (format #t "ok~%")))
 
-(define-syntax handler-register 
-  (syntax-rules () 
-    ((_ proto handler)
-     (add-to-list! *handler-list*
-		   proto
-		   handler)
-     )))
+(define http-static-page-req-handler
+  (lambda (file)
+    #t
+    ;; TODO: search static file then return content
+    )
+  )
 
-(define get-handler
-  (lambda (protocol)
-    (or (symbol? protocol)
-	(error get-handler "invalid type, should be symbol:" protocol))
-    (get-arg *handler-list* protocol)))
-
-
-
+(define http-request-handler
+  (lambda (client-connection)
+    (let* ([client-details (cdr client-connection)]
+	   [client (car client-connection)]
+	   )
+      #t
+      )))
 

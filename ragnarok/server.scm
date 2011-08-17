@@ -24,7 +24,6 @@
 	    )
   )
 
-
 (define-class <server> ()
   (socket #:init-value #f #:accessor server:socket)
   (config #:init-value #f #:accessor server:config)
@@ -34,10 +33,12 @@
   )
 
 (define-method (initialize (self <server>) initargs)
+  (next-method) ;; call regular routine
   (let* ([config (get-conf-table)]
 	 [status-show (hash-ref config 'status-show)]
 	 [logger (make <logger> `(status-show ,status-show))]
 	 [port (open-proper-port status-show)]
+	 [protocol (hash-ref config 'protocol)]
 	 )
     (set! (server:config self) config)
     (set! (server:logger self) logger)

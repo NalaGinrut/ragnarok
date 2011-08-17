@@ -57,13 +57,14 @@
 	    )))
    
 (define-method (initialize (self <logger>) initargs)
+  (next-method) ;; call regular routine
   (let* ([now (msg-time-stamp)]
 	 [status-show (get-arg initargs 'status-show)]
 	 [port (get-proper-port status-show)]
 	 [path (logger:path self)]
 	 )
-    (or (file-exists? *path*)
-	(mkdir *path*))
+    (or (file-exists? path)
+	(mkdir path))
     (set! (logger:port self) port)
     (log-printer port "**%a**: ~%Logger init!~%" now)
     ))
