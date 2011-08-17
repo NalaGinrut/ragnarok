@@ -13,26 +13,19 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (ragnarok threads)
-  #:use-module (ice-9 threads)
-  #:export (threads:enqueue
-	    threads:new)
+(define-module (ragnarok msg)
+  #:use-module (srfi srfi-9)
   )
 
-;; we use *futures* in Guile to implement thread pool
-;; maybe we need a brand new thread pool later... 
+(module-export-all! (current-module))
 
-(define-syntax threads:enqueue
-  (syntax-rules ()
-    ((_ proc . args)
-     (touch 
-      (future (proc . args))))))
+(define-record-type log-msg
+  (make-log-msg time type info)
+  log-msg?
+  (time msg:time msg:time!)
+  (type msg:type msg:type!)
+  (info msg:info msg:info!)
+  )
 
-(define-syntax threads:new
-  (syntax-rules (&)
-    ((_ proc . args)
-     (make-thread proc . args))
-    ((_ & proc . args)
-     (threads:enqueue proc . args)
-     )))
-
+(define (msg-time-stamp)
+  (strftime "%c" (localtime (current-time))))

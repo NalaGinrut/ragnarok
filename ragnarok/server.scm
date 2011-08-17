@@ -1,40 +1,68 @@
+;;  Copyright (C) 2011  
+;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
+;;  This program is free software: you can redistribute it and/or modify
+;;  it under the terms of the GNU General Public License as published by
+;;  the Free Software Foundation, either version 3 of the License, or
+;;  (at your option) any later version.
+
+;;  This program is distributed in the hope that it will be useful,
+;;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;  GNU General Public License for more details.
+
+;;  You should have received a copy of the GNU General Public License
+;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok server)
   #:use-module (oop goops)
-  #:use-module (
+  #:use-module (ragnarok utils)
+  #:use-module (ragnarok config)
+  #:use-module (ragnarok msg)
+  #:export (<server>
+	    server:socket server:config server:handler
+	    server:logger server:run server:show-config
+	    )
   )
 
 
 (define-class <server> ()
   (socket #:init-value #f #:accessor server:socket)
   (config #:init-value #f #:accessor server:config)
-  (protocol #:init-value 'http #:accessor server:protocol)
-  (handler #:init-value http-request-handler 
+  (handler #:init-value #f ;;http-request-handler 
 	   #:accessor server:handler)
-  
+  (logger #:init-value #f #:accessor server:logger)
   )
 
 (define-method (initialize (self <server>) initargs)
-  (let* ([config (make-hash-table max-conf-len)]
-	 
+  (let* ([config (get-conf-table)]
+	 [status-show (hash-ref config 'status-show)]
+	 [logger (make <logger> `(status-show ,status-show))]
+	 [port (open-proper-port status-show)]
 	 )
-    ;; TODO: get config from a config file. 
-    ;; we defined config handler in a new module.
-    
+    (set! (server:config self) config)
+    (set! (server:logger self) logger)
+    (set! (server:port self) port)
+    ))
 
 (define-method (server:get-config (self <server>) var)
   (let ((conf (server:config self)))
-    ;; FIXME: I need an exeption catch
+    ;; FIXME: I need an exception catch
+    ;; TODO: each server should have one config hash table
+    ;;       And all of them covered by one hash table.
     (hash-ref conf var)))
 
+(define-method (server:show-config (self <server>))
+  (let ([config (server:config self)])
+    (print-conf-table config)))
+	    
 (define-method (server:run (self <server>))
-  (let* ([s (server:socket self)]
+  (let* ([port (server:get-config self 'port)]
+	 [s (server:listen-port self port)]
 	 [root-path (server:get-config self 'root-path)]
 	 [proto (server:get-config self 'protocol)]
 	 [request-handler (server:get-handler self proto)]
 	 )
-    ;; FIXME: don't get config from config list each time
-    ;; I need a record to get each config we need.
+    ;; response loop
     (let active-loop ()
       (let* ([client-connection (accept s)]
 	     [client-details (cdr client-connection)]
@@ -50,10 +78,14 @@
 ;; for more generilzation, we pass info as non-type arg
 ;; and one may handle it with a custom printer
 (define-method (server:print-status 
-		(self <server>) (type <symbol>) info)
-  (let* ([status-show (server:get-config self 'status-show)]
-	 [
-
+		(self <server>) (type <symbol>) (info <string>))
+  (let* ([logger (server:logger self)]
+	 [time (msg-time-stamp)]
+	 [msg (make-log-msg time type info)]
+	 )
+    (logger:printer logger msg)))
+    
+;; listen in the port then return the socket
 (define-method (server:listen-port (self <server>) port)
   (let* ([s (socket PF_INET SOCK_STREAM 0)]
 	 [max-req (server:get-config self 'max-request)]
@@ -61,4 +93,6 @@
     (setsockopt s SOL_SOCKET SO_REUSEADDR 1)
     (bind s AF_INET INADDR_ANY port)
     (listen s max-req)
+    (set! (server:socket self) s)
+    s
     ))
