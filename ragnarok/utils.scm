@@ -20,7 +20,8 @@
 	    unless 
 	    exchange 
 	    get-arg
-	    add-to-list!)
+	    add-to-list!
+	    remove-from-list!)
   )
 
 (define-syntax unless
@@ -70,3 +71,13 @@
 	   (apply assoc-set! `(,a 
 			       k 
 			       ,v))))))
+
+(define-syntax remove-from-list! 
+  (syntax-rules ()
+    ((_ a k)
+     (set! a
+	   (apply assoc-remove! a k)))
+    ))
+	   
+		  
+

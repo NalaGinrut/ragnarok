@@ -20,7 +20,7 @@
 	    http-request-handler)
   )
 
-;;(handler-register http-handler)
+(handler-register! http http-handler)
 (define http-handler
   (lambda ()
     (format #t "ok~%")))

@@ -16,25 +16,35 @@
 (define-module (ragnarok handler)
   #:use-module (ragnarok utils)
   #:export (get-handler 
-	    handler-register
-	    *handler-list*)
+	    handler-register!
+	    handler-unregister!
+	    )
   )
 
 (define *handler-list* '())
 
-(define-syntax handler-register 
+;; NOTE: proto here doesn't have to be symbol, just write it down!
+(define-syntax handler-register! 
   (syntax-rules () 
     ((_ proto handler)
      (add-to-list! *handler-list*
 		   proto
-		   handler)
+		   (@ (ragnarok protocol proto) handler))
+     )))
+
+;; NOTE: proto here must be a symbol!
+(define-syntax handler-unregister! 
+  (syntax-rules () 
+    ((_ proto handler)
+     (add-to-list! *handler-list*
+		   proto)
      )))
 
 (define get-handler
   (lambda (protocol)
     (or (symbol? protocol)
 	(error get-handler "invalid type, should be symbol:" protocol))
-    (get-arg *handler-list* protocol)))
+    (assoc-ref *handler-list* protocol)))
 
 
 
