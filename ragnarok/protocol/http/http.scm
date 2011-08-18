@@ -15,22 +15,48 @@
 
 (define-module (ragnarok protocol http)
   #:use-module (ragnarok handler)
+  #:use-module (ragnarok server)
+  #:use-module (ragnarok log)
+  #:use-module (ragnarok utils)
   #:export (http-handler
-	    http-static-page-req-handler
-	    http-request-handler)
+	    )
   )
 
 (handler-register! http http-handler)
-(define http-handler
-  (lambda ()
-    (format #t "ok~%")))
 
-(define http-static-page-req-handler
+;; FIXME: I need to wrap handler template into a macro.
+;;        I believe users don't want to write some meta info by themselves.
+(define http-handler
+  (lambda (server conn-socket)
+    (let* ([logger (server:logger server)]
+	   [root-path (server:get-config server 'root-path)]
+	   
+	   ;; TPL[1]
+	   [request (get-request conn-socket)] 
+	   )
+
+      
+	   
+    (format #t "ok~%"))))
+
+(define get-request
+  (lambda (conn-socket)
+    ;; TODO: parse the request then return a request type
+    #t
+    ))
+
+(define http-static-page-serv-handler
   (lambda (file)
     #t
     ;; TODO: search static file then return content
     )
   )
+
+(define http-dynamic-page-serv-handler
+  (lambda (file)
+    #t
+    ;; TODO: search file and call templete handler to render cgi script
+    ))
 
 (define http-request-handler
   (lambda (client-connection)

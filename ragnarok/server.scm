@@ -18,6 +18,7 @@
   #:use-module (ragnarok utils)
   #:use-module (ragnarok config)
   #:use-module (ragnarok msg)
+  #:use-module (ragnarok handler)
   #:export (<server>
 	    server:socket server:config server:handler
 	    server:logger server:run server:show-config
@@ -25,10 +26,9 @@
   )
 
 (define-class <server> ()
-  (socket #:init-value #f #:accessor server:socket)
+  (listen-socket #:init-value #f #:accessor server:listen-socket)
   (config #:init-value #f #:accessor server:config)
-  (handler #:init-value #f ;;http-request-handler 
-	   #:accessor server:handler)
+  (handler #:init-value #f #:accessor server:handler)
   (logger #:init-value #f #:accessor server:logger)
   )
 
@@ -39,10 +39,15 @@
 	 [logger (make <logger> `(status-show ,status-show))]
 	 [port (open-proper-port status-show)]
 	 [protocol (hash-ref config 'protocol)]
+	 [handler (get-handler protocol)]
 	 )
     (set! (server:config self) config)
     (set! (server:logger self) logger)
     (set! (server:port self) port)
+    
+    (if handler
+	(set! (server:handler self) handler)
+	(error initialize "<server>: protocol hasn't been implemented yet!" protocol))
     ))
 
 (define-method (server:get-config (self <server>) var)
@@ -70,10 +75,22 @@
 	     [client (car client-connection)]
 	     )
 	;; FIXME: checkout the validity
-	(server:print-status self 'client-info client-details)
-	(request-handler client-connection)
+	(server:print-status self 
+			     'client-info 
+			     (get-client-info client-details))
+	;; FIXME: I need to spawn new thread for a request-handler
+	(request-handler self client-connection)
 	(close client))
       (active-loop)
+      )))
+
+(define get-client-info
+  (lambda (client-details)
+    (let* ([fam (sockaddr:fam client-details)]
+	   [ip (inet-ntop fam (sockaddr:addr client-details))]
+	   [port (ntohs (sockaddr:port client-details))]
+	   )
+      (format #f "Get request from ~a, client port: ~a~%" ip port)
       )))
 
 ;; for more generilzation, we pass info as non-type arg
@@ -94,6 +111,6 @@
     (setsockopt s SOL_SOCKET SO_REUSEADDR 1)
     (bind s AF_INET INADDR_ANY port)
     (listen s max-req)
-    (set! (server:socket self) s)
+    (set! (server:listen-socket self) s)
     s
     ))

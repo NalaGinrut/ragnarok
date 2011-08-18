@@ -42,9 +42,21 @@
 
 (define get-handler
   (lambda (protocol)
-    (or (symbol? protocol)
-	(error get-handler "invalid type, should be symbol:" protocol))
-    (assoc-ref *handler-list* protocol)))
+    (cond
+     ((not (symbol? protocol))
+      (error get-handler "invalid type, should be symbol:" protocol))
+     (protocol
+      (assoc-ref *handler-list* protocol))
+     (else
+      (error get-handler "protocol isn't specified!" protocol)
+      ))))
+
+(define (show-supported-protocol)
+  (format #t "Ragnarok supports these protocols:~%")
+  (for-each (lambda (x)
+	      (format #t "~a~%" (car x)))
+	    *handler-list*)
+  )
 
 
 
