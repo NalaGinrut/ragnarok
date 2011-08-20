@@ -14,15 +14,9 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok utils)
-  #:export (make-counter
-	    make-cursor-for
-	    exchange
-	    unless 
-	    exchange 
-	    get-arg
-	    add-to-list!
-	    remove-from-list!)
   )
+
+(module-export-all! (current-module))
 
 (define-syntax unless
   (syntax-rules ()
@@ -62,7 +56,10 @@
 (define-syntax get-arg
   (syntax-rules ()
     ((_ args which)
-     (car (assoc-ref args which)))))
+     (let ([al (assoc-ref args which)])
+       (if al
+	   (car al)
+	   #f)))))
 
 (define-syntax add-to-list! 
   (syntax-rules ()
@@ -79,5 +76,15 @@
 	   (apply assoc-remove! a k)))
     ))
 	   
-		  
+(define-syntax get-file-ext		  
+  (syntax-rules ()
+    ((_ filename)
+     (string-copy filename
+		  (1+ (string-index-right filename #\.)))
+    )))
 
+(define-syntax get-request-mime
+  (syntax-rules ()
+    ((_ filename)
+     (string->symbol (get-file-ext filename))
+     )))

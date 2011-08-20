@@ -49,6 +49,7 @@
     (protocol ,type:symbol)
     (status-show ,type:symbol)
     (max-request ,type:integer)
+    (port ,type:integer)
     ))
 
 (define verify-key-val
@@ -114,4 +115,3 @@
 	   ))))))
       
 
-TCSETA

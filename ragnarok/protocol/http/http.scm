@@ -13,56 +13,170 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (ragnarok protocol http)
-  #:use-module (ragnarok handler)
+(define-module (ragnarok protocol http http)
+  #:use-module (ragnarok protocol http status)
+  #:use-module (ragnarok protocol http mime)
   #:use-module (ragnarok server)
   #:use-module (ragnarok log)
   #:use-module (ragnarok utils)
-  #:export (http-handler
-	    )
+  #:use-module (ragnarok msg)
+  #:use-module (web request)
+  #:use-module (web response)
+  #:use-module (web uri)
+  #:export (http-handler)
   )
 
-(handler-register! http http-handler)
+(define get-bytevector-all (@ (rnrs io ports) get-bytevector-all))
+(define fold (@ (srfi srfi-1) fold))
+
+;; We use guile native http header parser here.
+;; Maybe I'll write a new one later, or I should post a patch to guile
+;; to support more MIME.
+
 
 ;; FIXME: I need to wrap handler template into a macro.
 ;;        I believe users don't want to write some meta info by themselves.
-(define http-handler
+(define http-handler 
   (lambda (server conn-socket)
     (let* ([logger (server:logger server)]
 	   [root-path (server:get-config server 'root-path)]
-	   
-	   ;; TPL[1]
-	   [request (get-request conn-socket)] 
+	   [request (get-request logger conn-socket)] 
+	   )
+      (http-request-log logger request)
+      (http-response server request conn-socket)
+      (close conn-socket)      
+      )))
+
+	  
+(define http-response
+  (lambda (server request conn-socket)
+    (let* ([logger (server:logger server)]
+	   [path (uri-path (request-uri request))]
+	   [root-path (server:get-config server 'root-path)]
+	   [file (string-append root-path path)]
 	   )
 
-      
-	   
-    (format #t "ok~%"))))
+      (call-with-values
+	  (lambda ()
+	    (generate-http-response-content logger file))
+	(lambda (bv status)
+	  (let* ([code (http-get-num-from-status status)]
+		 [response (build-response
+			    #:version '(1 . 1)
+			    #:code code
+			    #:port conn-socket)]
+		 )
+	    (write-response response conn-socket)
+	    (and bv (write-response-body response bv))
+	    ;;(http-response-log logger status)
+	    )))
+      )))
 
+(define http-response-log
+  (lambda (logger status)
+    (let ([info (http-get-info-from-status status)])
+      (logger:printer logger
+		      (make-log-msg (msg-time-stamp)
+				    status
+				    info))
+      )))
+
+(define http-request-log
+  (lambda (logger request)
+    (let* ([path (uri-path (request-uri request))]
+	   [info (format #f "Client request ~a" path)]
+	   )
+      (logger:printer logger
+		      (make-log-msg (msg-time-stamp)
+				    'request-info
+				    info))
+      )))
+      
+
+(define generate-http-response-content
+  (lambda (logger file)
+    (let ([mime (get-request-mime file)])
+
+    ;; TODO: I need a MIME module, and a mime-list to get MIME
+    ;;       handler. But here, I just used a simple dispatch.
+    (case mime
+      ((html) (http-static-page-serv-handler logger file))
+      ((gl) (http-dynamic-page-serv-handler logger file))
+      (else
+       ;; unknown mime always return as a static page
+       (http-static-page-serv-handler logger file)
+       ))
+    )))
+    
 (define get-request
-  (lambda (conn-socket)
-    ;; TODO: parse the request then return a request type
-    #t
+  (lambda (logger conn-socket)
+    (let* ([request (read-request conn-socket)]
+
+	   ;; FIXME: we should have a more pretty info print...
+	   [request-info (fold 
+			  (lambda (x y) 
+			    (string-append y (format #f "~a : ~a~%" 
+						     (object->string (car x))
+						     (object->string (cdr x)))))
+			  ""
+			  (request-headers request))]
+	   )
+      
+      ;; print request information
+      (logger:printer logger 
+		      (make-log-msg (msg-time-stamp)
+				    'request-info 
+				    request-info))
+      request
+      )))
+
+(define http-error-page-serv-handler
+  (lambda (logger status)
+    (let* ([info (http-get-info-from-status status)]
+	   [stat-file (http-get-stat-file-from-status status)]
+	   [stat-html (string-append "/etc/ragnarok/stat_html/"
+				     stat-file)]
+	   [err-bv (get-bytevector-all
+		    (open-input-file stat-html))]
+	   )
+      err-bv
+      )))
+      
+(define http-static-bin-serv-handler
+  (lambda (logger filename)
+    (call-with-values
+	(lambda ()
+	  (if (file-exists? filename)
+	      (values (get-bytevector-all 
+		       (open-file filename "r"))
+		      'OK)
+	      (values #vu8(0)
+		      'Not-Found)
+	      ))
+      (lambda (bv status)
+	(http-response-log logger status)
+	(values bv status)))
+    ))
+    
+(define http-static-page-serv-handler
+  (lambda (logger filename)
+    (call-with-values
+	(lambda ()
+	  (if (file-exists? filename)
+	      (values (get-bytevector-all 
+		       (open-file filename "r"))
+		      'OK)
+	      (values (http-error-page-serv-handler logger 'Not-Found)
+		      'Not-Found)
+	      ))
+      (lambda (bv status)
+	(http-response-log logger status)
+	(values bv status)))
     ))
 
-(define http-static-page-serv-handler
-  (lambda (file)
-    #t
-    ;; TODO: search static file then return content
-    )
-  )
-
 (define http-dynamic-page-serv-handler
-  (lambda (file)
+  (lambda (logger filename)
     #t
     ;; TODO: search file and call templete handler to render cgi script
     ))
-
-(define http-request-handler
-  (lambda (client-connection)
-    (let* ([client-details (cdr client-connection)]
-	   [client (car client-connection)]
-	   )
-      #t
-      )))
 

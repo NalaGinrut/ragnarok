@@ -15,40 +15,54 @@
 
 (define-module (ragnarok server)
   #:use-module (oop goops)
+  #:use-module (ragnarok env)
   #:use-module (ragnarok utils)
   #:use-module (ragnarok config)
   #:use-module (ragnarok msg)
   #:use-module (ragnarok handler)
+  #:use-module (ragnarok log)
   #:export (<server>
 	    server:socket server:config server:handler
 	    server:logger server:run server:show-config
+	    server:get-config
 	    )
   )
 
-(define-class <server> ()
-  (listen-socket #:init-value #f #:accessor server:listen-socket)
-  (config #:init-value #f #:accessor server:config)
-  (handler #:init-value #f #:accessor server:handler)
-  (logger #:init-value #f #:accessor server:logger)
+(define-class <server> (<env>)
+  ;; FIXME: support server name later. 
+  ;;        And logger name should accord to server name.
+  (name #:init-value "http0" #:accessor server:name)
+  (listen-socket #:accessor server:listen-socket)
+  (config #:accessor server:config)
+  (handler #:accessor server:handler)
+  (logger #:accessor server:logger)
   )
 
 (define-method (initialize (self <server>) initargs)
   (next-method) ;; call regular routine
-  (let* ([config (get-conf-table)]
+  (let* ([handler-list (load-handler)]
+	 [config (gen-conf-table)]
 	 [status-show (hash-ref config 'status-show)]
-	 [logger (make <logger> `(status-show ,status-show))]
-	 [port (open-proper-port status-show)]
+	 [logger (make <logger> `(status-show ,status-show) '())]
 	 [protocol (hash-ref config 'protocol)]
-	 [handler (get-handler protocol)]
+	 [handler (get-handler handler-list protocol)]
+	 [name (server:name self)]
 	 )
     (set! (server:config self) config)
     (set! (server:logger self) logger)
-    (set! (server:port self) port)
-    
+    (set! (server:handler self) handler)
+    (set! (env:handler-list self) handler-list)
+
+    ;; update env's servers list
+    (add-to-list! (env:server-list self) 
+		  (string->symbol name)
+		  self)
+
     (if handler
 	(set! (server:handler self) handler)
 	(error initialize "<server>: protocol hasn't been implemented yet!" protocol))
     ))
+
 
 (define-method (server:get-config (self <server>) var)
   (let ((conf (server:config self)))
@@ -64,23 +78,21 @@
 (define-method (server:run (self <server>))
   (let* ([port (server:get-config self 'port)]
 	 [s (server:listen-port self port)]
-	 [root-path (server:get-config self 'root-path)]
-	 [proto (server:get-config self 'protocol)]
-	 [request-handler (server:get-handler self proto)]
+	 [request-handler (server:handler self)]
 	 )
     ;; response loop
     (let active-loop ()
       (let* ([client-connection (accept s)]
 	     [client-details (cdr client-connection)]
-	     [client (car client-connection)]
+	     [conn-socket (car client-connection)]
 	     )
 	;; FIXME: checkout the validity
 	(server:print-status self 
 			     'client-info 
 			     (get-client-info client-details))
 	;; FIXME: I need to spawn new thread for a request-handler
-	(request-handler self client-connection)
-	(close client))
+	(request-handler self conn-socket)
+	)
       (active-loop)
       )))
 
