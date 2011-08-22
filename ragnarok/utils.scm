@@ -86,5 +86,14 @@
 (define-syntax get-request-mime
   (syntax-rules ()
     ((_ filename)
-     (string->symbol (get-file-ext filename))
-     )))
+     (if (file-exists? filename)
+	 (if (file-is-directory? filename)
+	     '*directory*
+	     (string->symbol (get-file-ext filename)))
+	 '*no-such-file*
+	 ))))
+
+(define-syntax check-if-dir
+  (syntax-rules ()
+    ((_ filename)
+     (

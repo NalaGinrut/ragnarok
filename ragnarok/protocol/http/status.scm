@@ -25,7 +25,7 @@
 ;; TODO: complete this *status-list*
 (define *status-list*
   '((OK (200 "*Status-200* Request's OK!" #f))
-
+    (No-Content (204 "*Status-204* No content!" #f))
     ;; 4xx
     (Bad-Request (400 "*Status-400* Bad Request!" #f))
     (Not-Found (404 "*Status-404* Not Found!" "404.html"))

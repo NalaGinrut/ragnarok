@@ -15,20 +15,22 @@
 
 (define-module (ragnarok protocol http http)
   #:use-module (ragnarok protocol http status)
-  #:use-module (ragnarok protocol http mime)
+  #:use-module (ragnarok protocol http method)
+  #:use-module (ragnarok protocol http log)
   #:use-module (ragnarok server)
   #:use-module (ragnarok log)
   #:use-module (ragnarok utils)
   #:use-module (ragnarok msg)
-  #:use-module (web request)
-  #:use-module (web response)
-  #:use-module (web uri)
   #:export (http-handler)
   )
 
-(define get-bytevector-all (@ (rnrs io ports) get-bytevector-all))
+(define request-method (@ (web request) request-method))
+(define request-headers (@ (web request) request-headers))
+(define read-request (@ (web request) read-request))
+(define build-response (@ (web response) build-response))
+(define write-response (@ (web response) write-response))
+(define write-response-body (@ (web response) write-response-body))
 (define fold (@ (srfi srfi-1) fold))
-
 ;; We use guile native http header parser here.
 ;; Maybe I'll write a new one later, or I should post a patch to guile
 ;; to support more MIME.
@@ -47,18 +49,16 @@
       (close conn-socket)      
       )))
 
-	  
 (define http-response
   (lambda (server request conn-socket)
-    (let* ([logger (server:logger server)]
-	   [path (uri-path (request-uri request))]
-	   [root-path (server:get-config server 'root-path)]
-	   [file (string-append root-path path)]
+    (let* ([method (request-method request)]
+	   [r-handler (http-get-method-handler method)]
 	   )
 
       (call-with-values
 	  (lambda ()
-	    (generate-http-response-content logger file))
+	    (r-handler server request))
+	    ;;(generate-http-response-content logger file))
 	(lambda (bv status)
 	  (let* ([code (http-get-num-from-status status)]
 		 [response (build-response
@@ -72,42 +72,6 @@
 	    )))
       )))
 
-(define http-response-log
-  (lambda (logger status)
-    (let ([info (http-get-info-from-status status)])
-      (logger:printer logger
-		      (make-log-msg (msg-time-stamp)
-				    status
-				    info))
-      )))
-
-(define http-request-log
-  (lambda (logger request)
-    (let* ([path (uri-path (request-uri request))]
-	   [info (format #f "Client request ~a" path)]
-	   )
-      (logger:printer logger
-		      (make-log-msg (msg-time-stamp)
-				    'request-info
-				    info))
-      )))
-      
-
-(define generate-http-response-content
-  (lambda (logger file)
-    (let ([mime (get-request-mime file)])
-
-    ;; TODO: I need a MIME module, and a mime-list to get MIME
-    ;;       handler. But here, I just used a simple dispatch.
-    (case mime
-      ((html) (http-static-page-serv-handler logger file))
-      ((gl) (http-dynamic-page-serv-handler logger file))
-      (else
-       ;; unknown mime always return as a static page
-       (http-static-page-serv-handler logger file)
-       ))
-    )))
-    
 (define get-request
   (lambda (logger conn-socket)
     (let* ([request (read-request conn-socket)]
@@ -129,54 +93,4 @@
 				    request-info))
       request
       )))
-
-(define http-error-page-serv-handler
-  (lambda (logger status)
-    (let* ([info (http-get-info-from-status status)]
-	   [stat-file (http-get-stat-file-from-status status)]
-	   [stat-html (string-append "/etc/ragnarok/stat_html/"
-				     stat-file)]
-	   [err-bv (get-bytevector-all
-		    (open-input-file stat-html))]
-	   )
-      err-bv
-      )))
-      
-(define http-static-bin-serv-handler
-  (lambda (logger filename)
-    (call-with-values
-	(lambda ()
-	  (if (file-exists? filename)
-	      (values (get-bytevector-all 
-		       (open-file filename "r"))
-		      'OK)
-	      (values #vu8(0)
-		      'Not-Found)
-	      ))
-      (lambda (bv status)
-	(http-response-log logger status)
-	(values bv status)))
-    ))
-    
-(define http-static-page-serv-handler
-  (lambda (logger filename)
-    (call-with-values
-	(lambda ()
-	  (if (file-exists? filename)
-	      (values (get-bytevector-all 
-		       (open-file filename "r"))
-		      'OK)
-	      (values (http-error-page-serv-handler logger 'Not-Found)
-		      'Not-Found)
-	      ))
-      (lambda (bv status)
-	(http-response-log logger status)
-	(values bv status)))
-    ))
-
-(define http-dynamic-page-serv-handler
-  (lambda (logger filename)
-    #t
-    ;; TODO: search file and call templete handler to render cgi script
-    ))
 
