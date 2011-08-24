@@ -20,6 +20,7 @@
   #:use-module (ragnarok server)
   #:use-module (ragnarok utils)
   #:export ( http-get-method-handler
+	     make-serv-handler
 	     http-method-POST-handler
 	     http-method-DELETE-handler
 	     http-method-HEAD-handler
@@ -51,6 +52,7 @@
   (lambda (server request)
     #t
     ))
+
 (define http-method-HEAD-handler
   (lambda (server request)
     #t
@@ -88,29 +90,51 @@
 	   ;;[m-handler (get-mime-handler mime)]
 	   )
 
-    ;; TODO: I need a MIME module, and a mime-list to get MIME
-    ;;       handler. But here, I just used a simple dispatch.
-    (case mime
-      ((html) (http-static-page-serv-handler logger file))
-      ((gl) (http-dynamic-page-serv-handler logger file))
-      ((*directory*) (http-directory-serv-handler logger file))
-      ((*no-such-file*) 
-       (values (http-error-page-serv-handler logger 'Not-Found)
-	       'Not-Found))
-      (else
-       ;; unknown mime always return as a static page
-       (http-static-page-serv-handler logger file)
-       ))
-    )))
+      ;; (m-handler logger file) 
+      ;; TODO: I need a MIME module, and a mime-list to get MIME
+      ;;       handler. But here, I just used a simple dispatch.
+      (call-with-values
+	  (lambda ()
+	    (case mime
+	      ((html) (http-static-page-serv-handler logger file))
+	      ((gl) (http-dynamic-page-serv-handler logger file))
+	      ((*directory*) (http-directory-serv-handler logger file))
+	      ((*no-such-file*) 
+	       (values (http-error-page-serv-handler logger 'Not-Found)
+		       'Not-Found))
+	      (else
+	       ;; unknown mime always be returned as a static page
+	       (http-static-page-serv-handler logger file)
+	       )))
+	(lambda (bv status)
+	  (let ([type (get-type-from-mime mime)])
+	    (values bv status type))))
+      )))
+
+(define get-directory-in-html
+  #t)
 
 (define http-directory-serv-handler
-  (lambda (logger file)
-    #t
+  (lambda (logger dir)
+    (call-with-values
+	(lambda ()
+	  (if (file-exists? dir)
+	      (values (get-directory-in-html dir)
+		      'OK)
+	      (values (http-error-page-serv-handler logger 'Not-Found)
+		      'Not-Found)
+	      ))
+      (lambda (bv status)
+	(http-response-log logger status)
+	(values bv status)))
     ;; TODO: 
     ;; 1. check the access permission;
     ;; 2. print direcory content as a html; -use ftw
     ;; 3. return (values content status).
     ))
+     
+       
+        
     
 (define http-error-page-serv-handler
   (lambda (logger status)
@@ -143,28 +167,15 @@
     ))
     
 (define http-static-page-serv-handler
-  (lambda (logger filename)
-    (call-with-values
-	(lambda ()
-	  (if (file-exists? filename)
-	      (values (get-bytevector-all 
-		       (open-file filename "r"))
-		      'OK)
-	      (values (http-error-page-serv-handler logger 'Not-Found)
-		      'Not-Found)
-	      ;;Don't remove this exception handle, in case the file is deleted
-	      ;;but it passed the first check
-	      ))
-      (lambda (bv status)
-	(http-response-log logger status)
-	(values bv status)))
+  (lambda (logger target)
+    ((make-serv-handler logger target) get-static-page)
     ))
 
 (define http-dynamic-page-serv-handler
-  (lambda (logger filename)
-    #t
-    ;; TODO: search file and call templete handler to render cgi script
-    ))
+  #t
+  ;;(make-serv-handler logger filename get-dynamic-page)
+  ;; TODO: search file and call templete handler to render cgi script
+  )
 
 
 (define *method-handler-list*
@@ -180,3 +191,26 @@
     ))
 
 
+(define make-serv-handler
+  (lambda (logger target)
+     (lambda (get-content-handler)
+       (call-with-values
+	   (lambda ()
+	     (if (file-exists? target)
+		 (values (get-content-handler target)
+			 'OK)
+		 (values (http-error-page-serv-handler logger 'Not-Found)
+			 'Not-Found)
+		 ;;Don't remove this exception handle, in case the file is deleted
+		 ;;but it passed the first check
+		 ))
+	 (lambda (bv status)
+	   (http-response-log logger status)
+	   (values bv status))))
+       ))
+
+(define get-static-page
+  (lambda (target)
+    (get-bytevector-all 
+     (open-file target "r"))
+     ))

@@ -50,6 +50,7 @@
     (status-show ,type:symbol)
     (max-request ,type:integer)
     (port ,type:integer)
+    (charset ,type:string)
     ))
 
 (define verify-key-val

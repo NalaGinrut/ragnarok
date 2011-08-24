@@ -1,0 +1,8 @@
+* Restart server on the fly with some special command.
+  - (reload-module (resolve-module '(ragnarok server))) 
+  - (reload-extensions server)
+    This step will refresh:
+    1. env:mime-types-list;
+    2. env:handler-list;
+    3. the specified server's attributes;
+    4. other servers won't change their behavior, but if they restart, new env works.

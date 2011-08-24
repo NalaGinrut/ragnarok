@@ -19,6 +19,7 @@
 	    http-get-info-from-status
 	    http-get-num-from-status
 	    http-get-stat-file-from-status
+	    http-gen-status-phrase
 	    )
   )
 
@@ -29,6 +30,15 @@
     ;; 4xx
     (Bad-Request (400 "*Status-400* Bad Request!" #f))
     (Not-Found (404 "*Status-404* Not Found!" "404.html"))
+    ))
+
+(define http-gen-status-phrase
+  (lambda (status)
+    (let* ([str (symbol->string value)]
+	   [i (string-contains str "-")]
+	   [str2 (string-replace str " " i (1+ i))]
+	   )
+      (string-capitalize str2))
     ))
 
 (define http-get-info-from-status

@@ -18,8 +18,11 @@
   #:use-module (ragnarok handler)
   #:export (<env>
 	    env:handler-list env:reload-handler-list
-	    env:server-list)
+	    env:server-list
+	    *ragnarok-version*)
   )
+
+(define *ragnarok-version* "Ragnarok 0.0.1")
 
 (define-class <env> ()
 
@@ -28,7 +31,9 @@
   (handler-list #:accessor env:handler-list #:allocation #:class)
   (server-list #:init-value '() #:accessor env:server-list
 	       #:allocation #:class)
+  (server-version #:init-value *ragnarok-version* #:accessor env:version)
   )
+
 
 (define-method (env:reload-handler-list (self <env>))
   (let ([handler-list (load-handler)])

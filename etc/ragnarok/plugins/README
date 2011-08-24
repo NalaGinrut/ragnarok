@@ -1,0 +1,2 @@
+This directory is used for extensional purpose. 
+It should be a soft link in /usr/local/share/guile/2.0/ to /etc/ragnarok/plugins.

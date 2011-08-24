@@ -24,12 +24,14 @@
   #:export (http-handler)
   )
 
+(define build-response (@ (ragnarok protocol http response) build-response))
+(define write-response (@ (ragnarok protocol http response) write-response))
+(define write-response-body 
+  (@ (ragnarok protocol http response) write-response-body))
+
 (define request-method (@ (web request) request-method))
 (define request-headers (@ (web request) request-headers))
 (define read-request (@ (web request) read-request))
-(define build-response (@ (web response) build-response))
-(define write-response (@ (web response) write-response))
-(define write-response-body (@ (web response) write-response-body))
 (define fold (@ (srfi srfi-1) fold))
 ;; We use guile native http header parser here.
 ;; Maybe I'll write a new one later, or I should post a patch to guile
@@ -51,7 +53,8 @@
 
 (define http-response
   (lambda (server request conn-socket)
-    (let* ([method (request-method request)]
+    (let* ([charset (server:get-config server 'charset)]
+	   [method (request-method request)]
 	   [r-handler (http-get-method-handler method)]
 	   )
 
@@ -59,12 +62,19 @@
 	  (lambda ()
 	    (r-handler server request))
 	    ;;(generate-http-response-content logger file))
-	(lambda (bv status)
+	(lambda (bv status type)
 	  (let* ([code (http-get-num-from-status status)]
+		 [bv-len (bytevector-lengh bv)]
 		 [response (build-response
-			    #:version '(1 . 1)
+			    #:version 1.1
 			    #:code code
-			    #:port conn-socket)]
+			    #:headers `(,@*regular-headers*
+					;; NOTE: keep these two lines last!
+					(content-length ,bv-len)
+					(content-type ,type)
+					)
+			    #:charset charset
+			    )]
 		 )
 	    (write-response response conn-socket)
 	    (and bv (write-response-body response bv))
