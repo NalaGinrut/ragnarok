@@ -124,18 +124,32 @@
   (lambda (logger dir)
     (let* ([perms (stat:perms (stat dir))]
 	   [ok (check-stat-perms perms '(u+r g+r o+r))]
-	   )
+		   )
       ;; TODO: 
       ;; 1. check the access permission;
       ;; 2. print direcory content as a html; -use ftw
       ;; 3. return content.
   
       (if ok
-	  ;; TODO: print directory
-	  ;;(http-error-page-serv-handler logger 'Forbidden)
-	  #t
-	  )
-      )))
+	  ;; print directory in html
+	  ;; FIXME: Guile haven't implement "scandir" yet ,we use pipe here.
+	  ;;        Maybe I should submit a patch to guile-dev for this.
+	  (let* ([cmd (string-append "ls -a " dir)] 
+		 [dpipe (open-pipe cmd OPEN_READ)]
+		 )
+	    (call-with-output-string  
+	     (lambda (port) 
+	       (let lp ((d (read-line dpipe))) 
+		 (if (not (eof-object? d)) 
+		     (let ([f (string-append "tmp/" d)]) 
+		       (if (file-is-directory? f) 
+			   (format port "~a - directory~%" f) 
+			   (format port "~a - file~%" f)) 
+		       (lp (readdir dir))))))))
+	  
+	  ;; return Forbidden page
+	  (http-error-page-serv-handler logger 'Forbidden)
+	  ))))
 
 (define http-directory-serv-handler
   (lambda (logger dir)
