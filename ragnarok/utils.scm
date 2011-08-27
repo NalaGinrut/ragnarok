@@ -16,7 +16,11 @@
 (define-module (ragnarok utils)
   )
 
+
 (module-export-all! (current-module))
+
+(define div-and-mod (@ (rnrs base) div-and-mod))
+(define assert (@ (rnrs base) assert))
 
 (define-syntax unless
   (syntax-rules ()
@@ -99,4 +103,76 @@
 	     (string->symbol (get-file-ext filename)))
 	 '*no-such-file*
 	 ))))
+
+;; Iff k and base has same sign, result is non-negative. Vice versa.
+;; This function is twice faster than (string->number (object->string n) base)
+(define num->xbase
+  (lambda (k base)
+    (if (not (and (integer? base) (> base 1)))
+	(error num->xbase "Invalid base! Base can not be 0 or 1!" base))
+    (let* ([neg0 (or (negative? k) (negative? base))] 
+	   [neg1 (not (and (negative? k) (negative? base)))] 
+	   [neg (and neg0 neg1)]
+	   [k (abs k)]
+	   [base (abs base)]
+	   )
+
+      (let lp ((n k) (result 0) (i 1))
+	(call-with-values 
+	    (lambda () (div-and-mod n base))
+	  (lambda (x y)
+	    (let ([ret (+ result (* y i))])
+	      (if (> x 0) 
+		  (lp x ret (* i 10))
+		  (if neg (- ret) ret))))))
+      )))
+
+(define check-permits
+  (lambda (perms mode)
+    (case mode
+      ((r) (zero? (logand perms #o444)))
+      ((w) (zero? (logand perms #o222)))
+      ((x) (zero? (logand perms #o111)))
+      ((o+r) (zero? (logand perms #o004)))
+      ((o+w) (zero? (logand perms #o002)))
+      ((o+x) (zero? (logand perms #o001)))
+      ((g+r) (zero? (logand perms #o040)))
+      ((g+w) (zero? (logand perms #o020)))
+      ((g+x) (zero? (logand perms #o010)))
+      ((u+r) (zero? (logand perms #o400)))
+      ((u+w) (zero? (logand perms #o200)))
+      ((u+x) (zero? (logand perms #o100)))
+      (else
+       (error check-permits "Invalid mode!" mode))
+      )))
+
+(define-syntax make-perms-seeds
+  (syntax-rules ()
+    ((_ pm)
+     (lambda (mode)
+       (check-permits pm mode)))))
+
+(define-syntax check-stat-perms
+  (syntax-rules ()
+    ((_ pm mode)
+     ((lambda (p m)
+	(let ([seeds (make-perms-seeds p)])
+	  (or-map seeds mode)
+	  ))
+      pm mode)
+     )))
+	       
+(define get-modified-time-str
+  (lambda (mt)
+    (strftime "%Y-%b-%d %H:%I" (localtime mt))
+    ))
+
+(define get-file-size-str
+  (lambda (bytes)
+    (let ([units '("bytes" "M" "G" "T" "P")])
+      (let lp ((sz bytes) (i 0))
+	(if (>= sz 1024)
+	    (lp (/ sz 1024) (1+ i))
+	    (format #f "~5f~a" sz (list-ref units i))
+	    )))))
 

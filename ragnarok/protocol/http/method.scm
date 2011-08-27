@@ -36,6 +36,7 @@
 (define uri-path (@ (web uri) uri-path))
 (define request-uri (@ (web request) request-uri))
 (define get-bytevector-all (@ (rnrs io ports) get-bytevector-all))
+(define bytevector-lengh (@ (rnrs io ports) bytevector-lengh))
 
 (define *status-page-dir* "/etc/ragnarok/stat_html/")
 
@@ -53,10 +54,16 @@
     #t
     ))
 
+;; returned as GET but without content
 (define http-method-HEAD-handler
   (lambda (server request)
-    #t
+    (call-with-values
+	(lambda ()
+	  (http-method-GET-handler server request))
+      (lambda (bv bv-len status type)
+	(values #vu8(0) bv-len status type)))
     ))
+
 (define http-method-PUT-handler
   (lambda (server request)
     #t
@@ -107,19 +114,35 @@
 	       (http-static-page-serv-handler logger file)
 	       )))
 	(lambda (bv status)
-	  (let ([type (get-type-from-mime mime)])
-	    (values bv status type))))
+	  (let* ([type (get-type-from-mime mime)]
+		 [bv-len (bytevector-lengh bv)]
+		 )
+	    (values bv bv-len status type))))
       )))
 
 (define get-directory-in-html
-  #t)
+  (lambda (logger dir)
+    (let* ([perms (stat:perms (stat dir))]
+	   [ok (check-stat-perms perms '(u+r g+r o+r))]
+	   )
+      ;; TODO: 
+      ;; 1. check the access permission;
+      ;; 2. print direcory content as a html; -use ftw
+      ;; 3. return content.
+  
+      (if ok
+	  ;; TODO: print directory
+	  ;;(http-error-page-serv-handler logger 'Forbidden)
+	  #t
+	  )
+      )))
 
 (define http-directory-serv-handler
   (lambda (logger dir)
     (call-with-values
 	(lambda ()
 	  (if (file-exists? dir)
-	      (values (get-directory-in-html dir)
+	      (values (get-directory-in-html logger dir)
 		      'OK)
 	      (values (http-error-page-serv-handler logger 'Not-Found)
 		      'Not-Found)
@@ -127,15 +150,8 @@
       (lambda (bv status)
 	(http-response-log logger status)
 	(values bv status)))
-    ;; TODO: 
-    ;; 1. check the access permission;
-    ;; 2. print direcory content as a html; -use ftw
-    ;; 3. return (values content status).
     ))
      
-       
-        
-    
 (define http-error-page-serv-handler
   (lambda (logger status)
     (let* ([info (http-get-info-from-status status)]
@@ -197,7 +213,7 @@
        (call-with-values
 	   (lambda ()
 	     (if (file-exists? target)
-		 (values (get-content-handler target)
+		 (values (get-content-handler logger target)
 			 'OK)
 		 (values (http-error-page-serv-handler logger 'Not-Found)
 			 'Not-Found)
@@ -210,7 +226,13 @@
        ))
 
 (define get-static-page
-  (lambda (target)
-    (get-bytevector-all 
-     (open-file target "r"))
-     ))
+  (lambda (logger target)
+    (let* ([perms (stat:perms (stat target))]
+	   [ok (check-stat-perms perms '(u+r g+r o+r))]
+	   )
+      
+      (if ok
+	  (get-bytevector-all 
+	   (open-file target "r"))
+	  (http-error-page-serv-handler logger 'Forbidden))
+     )))

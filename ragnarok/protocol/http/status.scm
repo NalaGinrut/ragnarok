@@ -29,6 +29,7 @@
     (No-Content (204 "*Status-204* No content!" #f))
     ;; 4xx
     (Bad-Request (400 "*Status-400* Bad Request!" #f))
+    (Forbidden (403 "*Status-403* Forbidden" "403.html"))
     (Not-Found (404 "*Status-404* Not Found!" "404.html"))
     ))
 

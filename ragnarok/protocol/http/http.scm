@@ -62,9 +62,8 @@
 	  (lambda ()
 	    (r-handler server request))
 	    ;;(generate-http-response-content logger file))
-	(lambda (bv status type)
+	(lambda (bv bv-len status type)
 	  (let* ([code (http-get-num-from-status status)]
-		 [bv-len (bytevector-lengh bv)]
 		 [response (build-response
 			    #:version 1.1
 			    #:code code
