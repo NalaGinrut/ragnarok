@@ -27,11 +27,11 @@
 
 (define http-response-log
   (lambda (logger status)
-    (let ([info (http-get-info-from-status status)])
+    (let ([reason (http-get-reason-from-status status)])
       (logger:printer logger
 		      (make-log-msg (msg-time-stamp)
 				    status
-				    info))
+				    reason))
       )))
 
 (define http-request-log

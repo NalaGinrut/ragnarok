@@ -14,12 +14,14 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok env)
+  #:use-module (ragnarok hook)
+  #:use-module (ragnarok utils)
   #:use-module (oop goops)
-  #:use-module (ragnarok handler)
   #:export (<env>
 	    env:handler-list env:reload-handler-list
 	    env:server-list
-	    *ragnarok-version*)
+	    *ragnarok-version*
+	    )
   )
 
 (define *ragnarok-version* "Ragnarok 0.0.1")
@@ -34,7 +36,13 @@
   (server-version #:init-value *ragnarok-version* #:accessor env:version)
   )
 
+(define-method (initialize (self <env>))
+  (next-method)
+  (hook-list-init)
+  )
 
-(define-method (env:reload-handler-list (self <env>))
-  (let ([handler-list (load-handler)])
-    (set! (env:handler-list self) handler-list)))
+(define (hook-list-init)
+  (for-each (lambda (hk)
+	      (apply (cadr hk) '()))
+	    *hook-list*))
+  

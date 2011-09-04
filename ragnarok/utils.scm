@@ -13,14 +13,12 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (ragnarok utils)
-  )
+(define-module (ragnarok utils))
 
 
 (module-export-all! (current-module))
 
 (define div-and-mod (@ (rnrs base) div-and-mod))
-(define assert (@ (rnrs base) assert))
 
 (define-syntax unless
   (syntax-rules ()
@@ -92,7 +90,7 @@
     ((_ filename)
      (string-copy filename
 		  (1+ (string-index-right filename #\.)))
-    )))
+     )))
 
 (define-syntax get-request-mime
   (syntax-rules ()
@@ -127,21 +125,22 @@
 		  (if neg (- ret) ret))))))
       )))
 
+;; FIXME: it's very slow, enhance it!
 (define check-permits
   (lambda (perms mode)
     (case mode
-      ((r) (zero? (logand perms #o444)))
-      ((w) (zero? (logand perms #o222)))
-      ((x) (zero? (logand perms #o111)))
-      ((o+r) (zero? (logand perms #o004)))
-      ((o+w) (zero? (logand perms #o002)))
-      ((o+x) (zero? (logand perms #o001)))
-      ((g+r) (zero? (logand perms #o040)))
-      ((g+w) (zero? (logand perms #o020)))
-      ((g+x) (zero? (logand perms #o010)))
-      ((u+r) (zero? (logand perms #o400)))
-      ((u+w) (zero? (logand perms #o200)))
-      ((u+x) (zero? (logand perms #o100)))
+      ((r) (not (zero? (logand perms #o444))))
+      ((w) (not(zero? (logand perms #o222))))
+      ((x) (not(zero? (logand perms #o111))))
+      ((o+r) (not (zero? (logand perms #o004))))
+      ((o+w) (not (zero? (logand perms #o002))))
+      ((o+x) (not (zero? (logand perms #o001))))
+      ((g+r) (not (zero? (logand perms #o040))))
+      ((g+w) (not (zero? (logand perms #o020))))
+      ((g+x) (not (zero? (logand perms #o010))))
+      ((u+r) (not (zero? (logand perms #o400))))
+      ((u+w) (not (zero? (logand perms #o200))))
+      ((u+x) (not (zero? (logand perms #o100))))
       (else
        (error check-permits "Invalid mode!" mode))
       )))
@@ -155,13 +154,11 @@
 (define-syntax check-stat-perms
   (syntax-rules ()
     ((_ pm mode)
-     ((lambda (p m)
-	(let ([seeds (make-perms-seeds p)])
+     (let ([seeds (make-perms-seeds pm)])
 	  (or-map seeds mode)
 	  ))
-      pm mode)
-     )))
-	       
+     ))
+
 (define get-modified-time-str
   (lambda (mt)
     (strftime "%Y-%b-%d %H:%I" (localtime mt))
@@ -176,3 +173,7 @@
 	    (format #f "~5f~a" sz (list-ref units i))
 	    )))))
 
+(define-syntax ->string
+  (syntax-rules ()
+    ((_ obj)
+     (object->string obj display))))

@@ -19,6 +19,7 @@
   #:use-module (ragnarok protocol http mime)
   #:use-module (ragnarok server)
   #:use-module (ragnarok utils)
+  #:use-module (ice-9 popen)
   #:export ( http-get-method-handler
 	     make-serv-handler
 	     http-method-POST-handler
@@ -33,10 +34,15 @@
 	     )
   )
 
+(define read-line (@ (ice-9 rdelim) read-line))
+(define gcrypt:sha1 (@ (gcrypt mda) gcrypt:sha1))
+(define open-pipe (@ (ice-9 popen) open-pipe))
+(define close-pipe (@ (ice-9 popen) close-pipe))
 (define uri-path (@ (web uri) uri-path))
 (define request-uri (@ (web request) request-uri))
+(define bytevector-length (@ (rnrs bytevectors) bytevector-length))
 (define get-bytevector-all (@ (rnrs io ports) get-bytevector-all))
-(define bytevector-lengh (@ (rnrs io ports) bytevector-lengh))
+(define string->utf8 (@ (rnrs bytevectors) string->utf8))
 
 (define *status-page-dir* "/etc/ragnarok/stat_html/")
 
@@ -57,11 +63,13 @@
 ;; returned as GET but without content
 (define http-method-HEAD-handler
   (lambda (server request)
+    ;; NOTE: We must read out the content of file, because we need to
+    ;;       generate ETAG.
     (call-with-values
 	(lambda ()
 	  (http-method-GET-handler server request))
-      (lambda (bv bv-len status type)
-	(values #vu8(0) bv-len status type)))
+      (lambda (bv bv-len status type etag mtime)
+       	(values #f bv-len status type etag mtime)))
     ))
 
 (define http-method-PUT-handler
@@ -107,107 +115,84 @@
 	      ((gl) (http-dynamic-page-serv-handler logger file))
 	      ((*directory*) (http-directory-serv-handler logger file))
 	      ((*no-such-file*) 
-	       (values (http-error-page-serv-handler logger 'Not-Found)
-		       'Not-Found))
+	       (http-error-page-serv-handler logger *Not-Found*))
 	      (else
 	       ;; unknown mime always be returned as a static page
-	       (http-static-page-serv-handler logger file)
-	       )))
-	(lambda (bv status)
+	       (http-static-page-serv-handler logger *Not-Found*))
+	      ))
+	(lambda (bv status fst)
 	  (let* ([type (get-type-from-mime mime)]
-		 [bv-len (bytevector-lengh bv)]
+		 [bv-len (if fst 
+			     (stat:size fst)
+			     (bytevector-length bv))] ;; do as dir handle.
+		 [mtime (if fst 
+			    (stat:mtime fst)
+			    (stat:mtime (stat file)))] ;; return dir's mtime
+		 [etag (generate-etag bv mtime)]
 		 )
-	    (values bv bv-len status type))))
+	    (values bv bv-len status type etag mtime))
+	  ))
       )))
 
-(define get-directory-in-html
-  (lambda (logger dir)
-    (let* ([perms (stat:perms (stat dir))]
-	   [ok (check-stat-perms perms '(u+r g+r o+r))]
-		   )
-      ;; TODO: 
-      ;; 1. check the access permission;
-      ;; 2. print direcory content as a html; -use ftw
-      ;; 3. return content.
-  
-      (if ok
-	  ;; print directory in html
-	  ;; FIXME: Guile haven't implement "scandir" yet ,we use pipe here.
-	  ;;        Maybe I should submit a patch to guile-dev for this.
-	  (let* ([cmd (string-append "ls -a " dir)] 
-		 [dpipe (open-pipe cmd OPEN_READ)]
-		 )
-	    (call-with-output-string  
-	     (lambda (port) 
-	       (let lp ((d (read-line dpipe))) 
-		 (if (not (eof-object? d)) 
-		     (let ([f (string-append "tmp/" d)]) 
-		       (if (file-is-directory? f) 
-			   (format port "~a - directory~%" f) 
-			   (format port "~a - file~%" f)) 
-		       (lp (readdir dir))))))))
-	  
-	  ;; return Forbidden page
-	  (http-error-page-serv-handler logger 'Forbidden)
-	  ))))
+(define generate-etag
+  (lambda (bv mtime)
+    ;; TODO: generate etag, now it just return a null string.
+    ""
+    ))
 
+;; NOTE: each serv-handler returns 3 values, bv&status&file-stat
+;;-------serv handler-----------------
 (define http-directory-serv-handler
   (lambda (logger dir)
     (call-with-values
 	(lambda ()
 	  (if (file-exists? dir)
-	      (values (get-directory-in-html logger dir)
-		      'OK)
-	      (values (http-error-page-serv-handler logger 'Not-Found)
-		      'Not-Found)
+	      (values (string->utf8 (get-directory-in-html logger dir))
+		      *OK*)
+	      (values (http-error-page-serv-handler logger *Not-Found*)
+		      *Not-Found*)
 	      ))
       (lambda (bv status)
 	(http-response-log logger status)
-	(values bv status)))
+	(values bv status #f))) ;; return fst as #f, then we could deal with dir.
     ))
      
 (define http-error-page-serv-handler
   (lambda (logger status)
-    (let* ([info (http-get-info-from-status status)]
-	   [stat-file (http-get-stat-file-from-status status)]
+    (let* ([stat-file (http-get-stat-file-from-status status)]
 	   [stat-html (string-append *status-page-dir*
 				     stat-file)]
 	   [err-bv (get-bytevector-all
 		    (open-input-file stat-html))]
+	   [fst (stat stat-html)]
 	   )
-      err-bv
+      (values err-bv status fst)
       )))
       
-(define http-static-bin-serv-handler
+(define http-static-page-serv-handler
   (lambda (logger filename)
     (call-with-values
 	(lambda ()
 	  (if (file-exists? filename)
-	      (values (get-bytevector-all 
-		       (open-file filename "r"))
-		      'OK)
-	      (values #vu8(0)
-		      'Not-Found)
+	      (get-static-page logger filename)
+	      (http-error-page-serv-handler logger *Not-Found*)
 	      ;;Don't remove this exception handle, in case the file is deleted
 	      ;;but it passed the first check
 	      ))
-      (lambda (bv status)
+      (lambda (bv status fst)
 	(http-response-log logger status)
-	(values bv status)))
+	(values bv status fst)))
     ))
     
-(define http-static-page-serv-handler
-  (lambda (logger target)
-    ((make-serv-handler logger target) get-static-page)
-    ))
-
 (define http-dynamic-page-serv-handler
   #t
   ;;(make-serv-handler logger filename get-dynamic-page)
   ;; TODO: search file and call templete handler to render cgi script
   )
+;;-------serv handler end-----------------
 
 
+;;-------method handler-----------------
 (define *method-handler-list*
   `((GET ,http-method-GET-handler)
     (POST ,http-method-POST-handler)
@@ -221,32 +206,54 @@
     ))
 
 
-(define make-serv-handler
-  (lambda (logger target)
-     (lambda (get-content-handler)
-       (call-with-values
-	   (lambda ()
-	     (if (file-exists? target)
-		 (values (get-content-handler logger target)
-			 'OK)
-		 (values (http-error-page-serv-handler logger 'Not-Found)
-			 'Not-Found)
-		 ;;Don't remove this exception handle, in case the file is deleted
-		 ;;but it passed the first check
-		 ))
-	 (lambda (bv status)
-	   (http-response-log logger status)
-	   (values bv status))))
-       ))
-
 (define get-static-page
   (lambda (logger target)
-    (let* ([perms (stat:perms (stat target))]
+    (let* ([fst (stat target)]
+	   [perms (stat:perms fst)]
 	   [ok (check-stat-perms perms '(u+r g+r o+r))]
 	   )
       
       (if ok
-	  (get-bytevector-all 
-	   (open-file target "r"))
-	  (http-error-page-serv-handler logger 'Forbidden))
+	  (values (get-bytevector-all 
+		   (open-file target "r"))
+		  *OK*
+		  fst)
+	  (http-error-page-serv-handler logger *Forbidden*))
      )))
+
+(define get-directory-in-html
+  (lambda (logger dir)
+    (let* ([fst (stat dir)]
+	   [perms (stat:perms fst)]
+	   [ok (check-stat-perms perms '(u+r g+r o+r))]
+	   )
+      ;; TODO: 
+      ;; 1. check the access permission;
+      ;; 2. print direcory content as a html; -use ftw
+      ;; 3. return content.
+  
+      (if ok
+	  ;; print directory in html
+	  ;; FIXME: Guile haven't implement "scandir" yet ,we use pipe here.
+	  ;;        Maybe I should submit a patch to guile-dev for this.
+	  (let* ([cmd (string-append "ls -a " dir)] 
+		 [dpipe (open-pipe cmd OPEN_READ)]
+		 )
+	    (values
+	     (call-with-output-string  
+	      (lambda (port) 
+		(let lp ((d (read-line dpipe))) 
+		  (if (not (eof-object? d)) 
+		      (if (file-is-directory? d) 
+			  (format port "~a - directory~%" d) 
+			  (format port "~a - file~%" d)) 
+		      (lp (readdir dir)))
+		  (close-pipe dpipe)
+		     )))
+	     *OK*
+	     fst))
+	  
+	  ;; return Forbidden page
+	  (http-error-page-serv-handler logger *Forbidden*)
+	  ))))
+;;-------method handler end-----------------

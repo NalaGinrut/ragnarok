@@ -14,14 +14,15 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok protocol http response)
+  #:use-module (ragnarok protocol http header)
   #:use-module (srfi srfi-9)
   #:export (build-response
 	    write-response
+	    write-response-body
 	    )
   )
 
-(define http-header (@ (ragnarok protocol http header) http-header))
-
+(define put-bytevector (@ (rnrs io ports) put-bytevector))
 (define-record-type response-type
   (make-response-type version code reason headers charset)
   response-type?
@@ -32,74 +33,46 @@
   (charset response:charset)
   )
 
-(define gen-code-str
-  (lambda (code)
-    (if (list? code)
-	(call-with-output-string
-	 (lambda (p)
-	   (for-each (lambda (x) (format p "~a " x)) code)))
-	(object->string code)
-	)))
-
-(define gen-reason-str
-  (lambda (reason)
-    (cond
-     ((symbol? reason)
-      (let* ([str (symbol->string reason)]
-	     [i (string-contains str "-")]
-	     [str2 (string-replace str " " i (1+ i))]
-	     )
-	(string-capitalize str2)))
-     ((string? reason)
-      reason)
-     (else
-      (error gen-reason-str "Invalid reason-phrase!" reason)))
-    ))
-
 (define gen-header-str
   (lambda (headers)
     (call-with-output-string
      (lambda (p)
-       (for-each (lambda (f v)
+       (for-each (lambda (h)
 		   (format p "~%~a"
-			   (http-header f (object->string v))))
+			   (http-header (car h) 
+					(cdr h))))
 		 headers)
        ))))
 
 ;; Rewrite from (web response), this version is smarter (I think, at least).
 ;; NOTE: We don't need to verify the headers, because we can make sure of it.
 (define* (build-response
-	  (#:key
-	   (version 1.1) 
-	   (code 200)
-	   reason ;; In general, we just pass "status" to this "reason-phrase".
-	   (headers '())
-	   (charset "iso-8859-1")
-	   ))
-  (make-response-type version code reason headers)
+	  #:key
+	  (version 1.1) 
+	  (code 200)
+	  (headers '())
+	  reason
+	  (charset "iso-8859-1")
+	  )
+  (make-response-type version code reason headers charset)
   )
 
 (define write-response
   (lambda (response port)
-    (let* ([version (response:version response)]
+    (let* ([version (object->string (response:version response))]
 	   [code (response:code response)]
 	   [reason (response:reason response)]
-	   [headers (response:headers response)]
-	   [response-str
-	    (call-with-output-string
-	     (lambda (p)
-	       (let* ([ver-str (object->string version)]
-		      [code-str (gen-code-str code)]
-		      [reason-str (gen-reason-str reason)]
-		      [h-str (gen-header-str headers)]
-		      )
-		 (format p "~a ~a ~a ~a;charset=~a~%~%"
-			 ver-str code-str reason-str h-str))))]
+	   [headers (gen-header-str (response:headers response))]
+	   [charset (response:charset response)]
 	   )
-      (write response-str port)
+      (format port "HTTP/~a ~a ~a ~a;charset=~a~%~%"
+	      version code reason headers charset)
       )))
        
-(define write-response-body
-  (lambda (bv type char-set port)
-    (let* ([len (bytevector-lengh bv)]
+(define-syntax write-response-body
+  (syntax-rules ()
+    ((_ bv port)
+     (put-bytevector port bv)
+     )))
+
 	   

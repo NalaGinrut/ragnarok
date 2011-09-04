@@ -13,30 +13,10 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (ragnarok protocol http header)
-  #:export (http-header
-	    *regular-headers*
-	    )
+(define-module (ragnarok hook)
+  #:export (*hook-list*)
   )
 
-(define *ragnarok-version* (@ (ragnarok env) *ragnarok-version*))
-(define *OS-info* (vector-ref (uname) 0))
-(define *server-info*
-  (format #f "~a (~a)" *ragnarok-version* *OS-info*))
-(define *accept-ranges* "bytes")
-(define *age* 3600) ;; This should be configured
-
-(define-syntax http-header
-  (syntax-rules ()
-    ((_ field value)
-     (format #f "~a: ~a"
-	     (string-capitalize (symbol->string field))
-	     value)
-     )))
-
-(define *regular-headers*
-  `((server . ,*server-info*)
-    (accept-ranges . ,*accept-ranges*)
-    (age . ,*age*)
+(define *hook-list*
+  `((http (@ (ragnarok protocol http http) init-hook))
     ))
-

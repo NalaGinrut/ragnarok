@@ -22,28 +22,7 @@
 	    )
   )
 
-;; TODO: An easy way to add handler dynamically is:
-;;       1. To make a link from "/etc/ragnarok/protocols/" to "ragnarok/protocol/".
-;;          And put all the protocol-modules to the former;
-;;       2. To put handler register code to a external file, then load it. 
-;;          Anyone could easily edit this register file. And notify the env
-;;          to reload handlers.
-(define (load-handler)
-
-  ;; TODO: include "/etc/ragnarok/handlers.conf"
-  ;; FIXME: fix the proto symbol bug.
-  ;;(handler-register! http http-handler)
-  (add-to-list! *handler-list*
-		http
-		(@ (ragnarok protocol http http) http-handler))
-
-  *handler-list*
-  )
-
-;; NOTE: dynamic handler register, then we can add new handler
-;;       without restarting the server~
 (define *handler-list* '())
-  
 
 ;; NOTE: proto here doesn't have to be symbol, just write it down!
 (define-syntax handler-register! 
@@ -80,6 +59,25 @@
 	    *handler-list*)
   )
 
+;; NOTE: dynamic handler register, then we can add new handler
+;;       without restarting the server~
+;; TODO: An easy way to add handler dynamically is:
+;;       1. To make a link from "/etc/ragnarok/protocols/" to "ragnarok/protocol/".
+;;          And put all the protocol-modules to the former;
+;;       2. To put handler register code to a external file, then load it. 
+;;          Anyone could easily edit this register file. And notify the env
+;;          to reload handlers.
+(define (load-handler)
+
+  ;; TODO: include "/etc/ragnarok/handlers.conf"
+  ;; FIXME: fix the proto symbol bug.
+  (handler-register! http http-handler)
+ ; (add-to-list! *handler-list*
+;		http
+;		(@ (ragnarok protocol http http) http-handler))
+
+  *handler-list*
+  )
 
 
 

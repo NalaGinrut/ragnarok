@@ -18,6 +18,7 @@
   #:export (get-mime-handler
 	    get-mime-types-list
 	    get-type-from-mime
+	    init-mime-table
 	    )
   )
 
@@ -38,12 +39,23 @@
     (hash-ref *mime-types-table* mime)))
 
 ;; TODO: generate this table on the env init time, and save a copy in env.
-(define *mime-types-table* #f)
+(define *mime-types-table* (make-hash-table 100))
 
 ;; TODO: generated mime-types table
 (define (get-mime-types-list)
   (load *mime-list-file*)
   )
+
+(define (init-mime-table)
+  (let ([mtl (get-mime-types-list)])
+    (for-each (lambda (x)
+		(hash-set! *mime-types-table*
+			   (car x)
+			   (cadr x)))
+	      mtl)
+    (format #t "mimt table init ok!~%")
+    ))
+  
 
 ;; TODO: MIME handler should be dynamically registered.
 (define *mime-handler-list*

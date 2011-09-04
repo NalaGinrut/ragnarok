@@ -85,7 +85,7 @@
 	(error log-printer "invalid msg format:" msg))
 
     (let* ([time (msg:time msg)]
-	   [type (symbol->string (msg:type msg))]
+	   [type (object->string (msg:type msg))]
 	   [info (msg:info msg)]
 	   )
       (format port "~a:~% [~a] ~a~%" time type info)

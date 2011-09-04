@@ -102,7 +102,8 @@
 	  (cond
 	   ((eof-object? conf-line)
 	    cl)  
-	   ((string-null? conf-line)
+	   ((or (string-null? conf-line)
+		(char=? (string-ref conf-line 0) #\#))
 	    (read-loop cl))
 	   (else
 	    (let* ([kvl (string-split conf-line *split-sign*)]

@@ -16,11 +16,11 @@
 (define-module (ragnarok server)
   #:use-module (oop goops)
   #:use-module (ragnarok env)
-  #:use-module (ragnarok utils)
   #:use-module (ragnarok config)
   #:use-module (ragnarok msg)
   #:use-module (ragnarok handler)
   #:use-module (ragnarok log)
+  #:use-module (ragnarok utils)
   #:export (<server>
 	    server:socket server:config server:handler
 	    server:logger server:run server:show-config
@@ -93,6 +93,8 @@
 			     (get-client-info client-details))
 	;; FIXME: I need to spawn new thread for a request-handler
 	(request-handler self conn-socket)
+	(shutdown conn-socket 2) ;; can be closed after trans finished.
+	;;(close-port conn-socket)      
 	)
       (active-loop)
       )))

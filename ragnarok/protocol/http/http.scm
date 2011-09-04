@@ -17,6 +17,8 @@
   #:use-module (ragnarok protocol http status)
   #:use-module (ragnarok protocol http method)
   #:use-module (ragnarok protocol http log)
+  #:use-module (ragnarok protocol http response)
+  #:use-module (ragnarok protocol http mime)
   #:use-module (ragnarok server)
   #:use-module (ragnarok log)
   #:use-module (ragnarok utils)
@@ -24,11 +26,7 @@
   #:export (http-handler)
   )
 
-(define build-response (@ (ragnarok protocol http response) build-response))
-(define write-response (@ (ragnarok protocol http response) write-response))
-(define write-response-body 
-  (@ (ragnarok protocol http response) write-response-body))
-
+(define *regular-headers* (@ (ragnarok protocol http header) *regular-headers*))
 (define request-method (@ (web request) request-method))
 (define request-headers (@ (web request) request-headers))
 (define read-request (@ (web request) read-request))
@@ -37,6 +35,11 @@
 ;; Maybe I'll write a new one later, or I should post a patch to guile
 ;; to support more MIME.
 
+(define (init-hook)
+  (init-mime-table)
+  ;; Insert whatever you want to do before a relative server run.
+  )
+  
 
 ;; FIXME: I need to wrap handler template into a macro.
 ;;        I believe users don't want to write some meta info by themselves.
@@ -48,7 +51,6 @@
 	   )
       (http-request-log logger request)
       (http-response server request conn-socket)
-      (close conn-socket)      
       )))
 
 (define http-response
@@ -62,21 +64,27 @@
 	  (lambda ()
 	    (r-handler server request))
 	    ;;(generate-http-response-content logger file))
-	(lambda (bv bv-len status type)
-	  (let* ([code (http-get-num-from-status status)]
+	(lambda (bv bv-len status type etag mtime)
+	  (let* ([reason (or (http-get-reason-from-status status)
+			     "Invalid Status")]
+		 [mt (strftime "%c" (localtime mtime))]
 		 [response (build-response
 			    #:version 1.1
-			    #:code code
+			    #:code status
+			    #:reason reason
 			    #:headers `(,@*regular-headers*
+					(last-modified . ,mt)
+					(etag . ,etag)
+					
 					;; NOTE: keep these two lines last!
-					(content-length ,bv-len)
-					(content-type ,type)
+					(content-length . ,bv-len)
+					(content-type . ,type)
 					)
 			    #:charset charset
 			    )]
 		 )
 	    (write-response response conn-socket)
-	    (and bv (write-response-body response bv))
+	    (and bv (write-response-body bv conn-socket))
 	    ;;(http-response-log logger status)
 	    )))
       )))
