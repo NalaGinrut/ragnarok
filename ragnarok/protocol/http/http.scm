@@ -67,7 +67,7 @@
 	(lambda (bv bv-len status type etag mtime)
 	  (let* ([reason (or (http-get-reason-from-status status)
 			     "Invalid Status")]
-		 [mt (strftime "%c" (localtime mtime))]
+		 [mt (strftime "%c" (gmtime mtime))] ;; return to client as GMT.
 		 [response (build-response
 			    #:version 1.1
 			    #:code status

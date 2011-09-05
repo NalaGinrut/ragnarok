@@ -20,6 +20,26 @@
 
 (define div-and-mod (@ (rnrs base) div-and-mod))
 
+(define-syntax space-skip
+  (syntax-rules ()
+    ((_ str . opt)
+     (string-skip str #\space . opt))))
+
+(define-syntax get-word 
+  (syntax-rules ()
+    ((_ str . opt)
+     (let ([i (space-skip str . opt)])
+       (string-copy str i (string-contains str " " (1+ i))))
+     ))) 
+
+(define-syntax get-word-list
+  (syntax-rules ()
+    ((_ str)
+     (map string-trim-both (string-split str #\space)))
+    ((_ str ch)
+     (map string-trim-both (string-split str ch)))
+    ))
+
 (define-syntax unless
   (syntax-rules ()
     ((unless test result1 result2 ...)
@@ -177,3 +197,4 @@
   (syntax-rules ()
     ((_ obj)
      (object->string obj display))))
+
