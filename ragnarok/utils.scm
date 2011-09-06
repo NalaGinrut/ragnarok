@@ -20,6 +20,8 @@
 
 (define div-and-mod (@ (rnrs base) div-and-mod))
 
+(define get-config hash-ref)
+
 (define-syntax space-skip
   (syntax-rules ()
     ((_ str . opt)

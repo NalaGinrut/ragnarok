@@ -15,17 +15,17 @@
 
 (define-module (ragnarok protocol http http)
   #:use-module (ragnarok protocol http status)
-  #:use-module (ragnarok protocol http method)
   #:use-module (ragnarok protocol http log)
   #:use-module (ragnarok protocol http response)
-  #:use-module (ragnarok protocol http mime)
-  #:use-module (ragnarok server)
   #:use-module (ragnarok log)
   #:use-module (ragnarok utils)
   #:use-module (ragnarok msg)
   #:export (http-handler)
   )
 
+(define http-get-method-handler 
+  (@ (ragnarok protocol http method) http-get-method-handler)) 
+(define init-mime (@ (ragnarok protocol http mime) init-mime))
 (define *regular-headers* (@ (ragnarok protocol http header) *regular-headers*))
 (define request-method (@ (web request) request-method))
 (define request-headers (@ (web request) request-headers))
@@ -35,34 +35,27 @@
 ;; Maybe I'll write a new one later, or I should post a patch to guile
 ;; to support more MIME.
 
-(define (init-hook)
-  (init-mime-table)
-  ;; Insert whatever you want to do before a relative server run.
-  )
   
 
 ;; FIXME: I need to wrap handler template into a macro.
 ;;        I believe users don't want to write some meta info by themselves.
 (define http-handler 
-  (lambda (server conn-socket)
-    (let* ([logger (server:logger server)]
-	   [root-path (server:get-config server 'root-path)]
-	   [request (get-request logger conn-socket)] 
-	   )
+  (lambda (config logger conn-socket)
+    (let ([request (get-request logger conn-socket)])
       (http-request-log logger request)
-      (http-response server request conn-socket)
+      (http-response config logger request conn-socket)
       )))
 
 (define http-response
-  (lambda (server request conn-socket)
-    (let* ([charset (server:get-config server 'charset)]
+  (lambda (config logger request conn-socket)
+    (let* ([charset (get-config config 'charset)]
 	   [method (request-method request)]
 	   [r-handler (http-get-method-handler method)]
 	   )
 
       (call-with-values
 	  (lambda ()
-	    (r-handler server request))
+	    (r-handler config logger request))
 	    ;;(generate-http-response-content logger file))
 	(lambda (bv bv-len status type etag mtime)
 	  (let* ([reason (or (http-get-reason-from-status status)
@@ -110,4 +103,5 @@
 				    request-info))
       request
       )))
+
 

@@ -13,16 +13,12 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (ragnarok hook)
-  #:export (hook-list-init)
+(define-module (ragnarok cgi guile)
+  #:export (http-guile-serv-handler)
   )
 
-(define *hook-list*
-  `((http ,(@ (ragnarok protocol http hook) init-hook))
-    ))
+(define http-guile-serv-handler
+  (lambda (logger file)
+    #t))
 
-(define (hook-list-init)
-  (for-each (lambda (hk)
-	      (apply (cadr hk) '()))
-	    *hook-list*))
 

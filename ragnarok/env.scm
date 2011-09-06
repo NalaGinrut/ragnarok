@@ -36,13 +36,9 @@
   (server-version #:init-value *ragnarok-version* #:accessor env:version)
   )
 
-(define-method (initialize (self <env>))
+(define-method (initialize (self <env>) . initargs)
   (next-method)
   (hook-list-init)
   )
 
-(define (hook-list-init)
-  (for-each (lambda (hk)
-	      (apply (cadr hk) '()))
-	    *hook-list*))
   

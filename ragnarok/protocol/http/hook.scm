@@ -13,16 +13,12 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (ragnarok hook)
-  #:export (hook-list-init)
+(define-module (ragnarok protocol http hook)
+  #:export (init-hook)
   )
 
-(define *hook-list*
-  `((http ,(@ (ragnarok protocol http hook) init-hook))
-    ))
-
-(define (hook-list-init)
-  (for-each (lambda (hk)
-	      (apply (cadr hk) '()))
-	    *hook-list*))
+(define (init-hook)
+  ((@ (ragnarok protocol http mime) init-mime))
+  ;; Insert whatever you want to do before a relative server run.
+  )
 

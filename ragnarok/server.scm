@@ -80,6 +80,8 @@
   (let* ([port (server:get-config self 'port)]
 	 [s (server:listen-port self port)]
 	 [request-handler (server:handler self)]
+	 [config (server:config self)]
+	 [logger (server:logger self)]
 	 )
     ;; response loop
     (let active-loop ()
@@ -92,7 +94,7 @@
 			     'client-info 
 			     (get-client-info client-details))
 	;; FIXME: I need to spawn new thread for a request-handler
-	(request-handler self conn-socket)
+	(request-handler config logger conn-socket)
 	(shutdown conn-socket 2) ;; can be closed after trans finished.
 	;;(close-port conn-socket)      
 	)

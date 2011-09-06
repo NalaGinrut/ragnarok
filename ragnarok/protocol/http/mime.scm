@@ -18,7 +18,7 @@
   #:export (get-mime-handler
 	    get-mime-types-list
 	    get-type-from-mime
-	    init-mime-table
+	    init-mime
 	    )
   )
 
@@ -26,13 +26,9 @@
 
 (define get-mime-handler
   (lambda (mime)
-    (get-arg *mime-handler-list* mime)))
-
-;; FIXME: Well~this is tmp, I know it's urgly, but don't worry, I'll fix it.
-(define html-serv-handler #f) 
-  ;;(@@ (ragnarok protocol http http) http-static-page-serv-handler))
-
-(define guile-serv-handler #f)
+    (hash-ref *mime-handlers-table* mime)
+    ;;(get-arg *mime-handler-list* mime)
+    ))
 
 (define get-type-from-mime
   (lambda (mime)
@@ -40,27 +36,34 @@
 
 ;; TODO: generate this table on the env init time, and save a copy in env.
 (define *mime-types-table* (make-hash-table 100))
+(define *mime-handlers-table* (make-hash-table 10))
 
 ;; TODO: generated mime-types table
 (define (get-mime-types-list)
   (load *mime-list-file*)
   )
 
-(define (init-mime-table)
+(define (init-mime)
   (let ([mtl (get-mime-types-list)])
+    ;; init mime type table
     (for-each (lambda (x)
 		(hash-set! *mime-types-table*
 			   (car x)
 			   (cadr x)))
 	      mtl)
-    (format #t "mimt table init ok!~%")
+
+    ;; init mime handler table
+    (for-each (lambda (x)
+		(hash-set! *mime-handlers-table*
+			   (car x)
+			   (cadr x)))
+	      *mime-handler-list*)
     ))
-  
 
 ;; TODO: MIME handler should be dynamically registered.
 (define *mime-handler-list*
-  `((html ,html-serv-handler)
-    (gl ,guile-serv-handler)
+  `((html ,(@@ (ragnarok protocol http handler) http-static-page-serv-handler))
+    (gl ,(@ (ragnarok cgi guile) http-guile-serv-handler))
     ))
 
 
