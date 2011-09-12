@@ -16,7 +16,7 @@
 (define-module (ragnarok protocol http mime)
   #:use-module (ragnarok utils)
   #:export (get-mime-handler
-	    get-mime-types-list
+	    *mime-types-table*
 	    get-type-from-mime
 	    init-mime
 	    )
@@ -47,9 +47,14 @@
   (let ([mtl (get-mime-types-list)])
     ;; init mime type table
     (for-each (lambda (x)
-		(hash-set! *mime-types-table*
-			   (car x)
-			   (cadr x)))
+		(let* ([mtype (car x)]
+		       [mimes (cadr x)]
+		       )
+		  (for-each (lambda (m)
+			      (hash-set! *mime-types-table*
+					 m
+					 mtype))
+			    mimes)))
 	      mtl)
 
     ;; init mime handler table
