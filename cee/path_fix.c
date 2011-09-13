@@ -21,6 +21,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define MAX_PATH_LEN 4096 // exceeded would be cut
 
 #define NORMAL 1
@@ -98,17 +102,15 @@ static inline int get_dir(const char* path ,char* buf ,int* pi ,int* bi)
   return ret;
 }
 
-SCM_DEFINE(scm_mmr_path_fix ,"path-fix" ,1,
-	   (SCM target),
-	   "deal with relative path for ragnarok server."
-	   )
-#define FUNC_NAME s_scm_mmr_path_fix
+SCM scm_mmr_path_fix(SCM target)
+#define FUNC_NAME "path-fix"
 {
   char *path = NULL;
   char *fixed = NULL; // fiexed path
   int path_len = 0;
   int bi = 0;
   int pi = 0;
+  SCM ret;
   
   SCM_VALIDATE_STRING(1, target);
 
@@ -135,7 +137,11 @@ SCM_DEFINE(scm_mmr_path_fix ,"path-fix" ,1,
   return ret;
 }
 #undef FUNC_NAME
-      
+  
+#ifdef __cplusplus
+}
+#endif
+
 // TODO: regenerate a valid path from request's path
 //	 1. cut off all the "..";
 //	 2. keep path within the root path;

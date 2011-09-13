@@ -101,7 +101,7 @@
   (lambda (logger dir)
     (let* ([fst (stat dir)]
 	   [perms (stat:perms fst)]
-	   [ok (check-stat-perms perms '(u+r g+r o+r))]
+	   [ok (logand perms #o555)]
 	   )
       ;; TODO: 
       ;; 1. check the access permission;

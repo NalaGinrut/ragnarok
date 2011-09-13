@@ -41,14 +41,8 @@ extern "C" {
   /* This scandir is a shrink version of the glibc version.
    * I believe we don't need versionsort or any other sort in the ragnarok.
    */
-SCM_DEFINE(scm_scandir, "scandir", 1, 1, 0,
-	   (SCM dir, SCM filter),
-	   "Return a list which contains all files and directories' name of the "
-	   "@var{dir}."
-	   "The second arg @var{filter} is a proc with 2 args and return #t "
-	   "for keeping this result, and vice versa.\n"
-	   )
-#define FUNC_NAME s_scm_scandir
+SCM scm_mmr_scandir(SCM dir, SCM filter)
+#define FUNC_NAME "scandir"
 {
     struct dirent_or_dirent64 **rdent;
     int has_filter = 0;
@@ -116,7 +110,7 @@ SCM_DEFINE(scm_scandir, "scandir", 1, 1, 0,
     return ret;
 }
 #undef FUNC_NAME
-
+  
 #ifdef __cplusplus
 }
 #endif
