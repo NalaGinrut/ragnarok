@@ -1,6 +1,5 @@
 *.o
 Makefile
-Makefile.in
 .deps
 .libs
 autom4te.cache
@@ -25,9 +24,7 @@ install-sh
 texinfo.tex
 *~
 ,*
-BUGS
 Makefile
-Makefile.in
 aclocal.m4
 autom4te.cache
 benchmark-guile
@@ -58,11 +55,9 @@ pre-inst-guile
 pre-inst-guile-env
 stamp-h1
 *.go
-TAGS
 cscope.out
 cscope.files
 *.log
-INSTALL
 *.aux
 *.cp
 *.cps

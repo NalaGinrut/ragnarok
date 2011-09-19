@@ -72,10 +72,22 @@
     ))
     
 (define http-dynamic-page-serv-handler
-  #t
+  (lambda (logger filename)
+    (call-with-values
+	(lambda ()
+	  (if (file-exists? filename)
+	      (get-static-page logger filename)
+	      (http-error-page-serv-handler logger *Not-Found*)
+	      ;;Don't remove this exception handle, in case the file is deleted
+	      ;;but it passed the first check
+	      ))
+      (lambda (bv status fst)
+	(http-response-log logger status)
+	(values bv status fst)))
+
   ;;(make-serv-handler logger filename get-dynamic-page)
   ;; TODO: search file and call templete handler to render cgi script
-  )
+  ))
 ;;-------serv handler end-----------------
 
 

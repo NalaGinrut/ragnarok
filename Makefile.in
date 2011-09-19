@@ -1,0 +1,37 @@
+CFLAGS := @GUILE_CFLAGS@ -r -MD 
+LIBS := @GUILE_LIBS@ -fPIC -shared
+LDFLAGS := @GUILE_LDFLAGS@ -fPIC -shared
+CC := @CC@
+CEE := cee
+MOD := ragnarok
+OBJ := obj
+GUILEC := guild compile 
+V := @
+
+mod-cfile := $(wildcard $(MOD)/*.scm)
+mod-ofile := $(mod-cfile:.scm=.go)
+mod-ofile := $(subst $(MOD)/,$(OBJ)/,$(mod-ofile))
+
+-include $(CEE)/Makefile.mk
+
+all: libragnarok.so modules
+
+$(OBJ)/%.go: $(MOD)/%.scm
+	@echo guilec +  @<
+	@mkdir -p $(@D)
+	$(V)$(GUILEC) -o $@ $<
+
+.PHONY: clean modules
+
+clean:
+	rm -frd $(OBJ)
+
+install: $(OBJ)/libragnarok.so
+	install -m 644 $(OBJ)/*.so /usr/local/lib/
+
+distclean: distclean-mk clean
+
+distclean-mk:
+	rm -f Makefile
+
+modules: $(mod-ofile)
