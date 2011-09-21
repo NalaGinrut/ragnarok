@@ -25,6 +25,8 @@
 extern "C" {
 #endif
 
+#define NAMLEN(dirent) strlen((dirent)->d_name)
+  
     //#if defined GUILE_USE_64_CALLS && GUILE_USE_64_CALLS && defined(HAVE_STAT64)
     // FIXME: check 64bit if we have configure    
 #ifdef 	RAGNAROK_HAS_CONFIGURE
@@ -64,9 +66,9 @@ SCM scm_mmr_scandir(SCM dir, SCM filter)
     scm_dynwind_begin(0);
     errno = 0;
 
-    SCM_SYSCALL(n = scandir_or_scandir64(scm_to_locale_string(dir),
-						 &rdent, NULL,
-						 alphasort_or_alphasort64));
+    n = scandir_or_scandir64(scm_to_locale_string(dir),
+			     &rdent, NULL,
+			     alphasort_or_alphasort64);
 
     if(has_filter)
 	{

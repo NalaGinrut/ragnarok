@@ -38,6 +38,24 @@ extern "C" {
   ((path)[1] == '.' && (path)[2] == '.' \
    && ((path)[3] == '/' || (path)[3] == '\0'))
 
+#define NEED_FIX(path) \
+  ((path)[0] != '\0' && (path)[1] == '.' \
+   && (path)[2] == '.' && (path)[3] == '/')
+  
+static inline char* fix_prefix(const char* path)
+{
+  /* NOTE: delete ".." in prefix
+   */
+  const char* ptr = path;
+
+  while(NEED_FIX(ptr))
+    {
+      ptr += 3;
+    }
+  
+  return (char*)ptr;
+}
+  
 static inline int drop_last_dir(char* path)
 {
   char* ptr = path-1;
@@ -80,7 +98,7 @@ static inline int get_dir(const char* path ,char* buf ,int* pi ,int* bi)
 	  return END;
 	}
       
-      buf[len+1] = '\0'; // end fixed string
+      buf[len] = '\0'; // end fixed string
       ret = LAST;
     }
   else if(IS_RELATIVE(head))
@@ -107,6 +125,7 @@ SCM scm_mmr_path_fix(SCM target)
 {
   char *path = NULL;
   char *fixed = NULL; // fiexed path
+  char *tmp = NULL;
   int path_len = 0;
   int bi = 0;
   int pi = 0;
@@ -130,7 +149,8 @@ SCM scm_mmr_path_fix(SCM target)
    * because we'll append *path '/' filenam* finally.
    */
 
-  ret = scm_from_locale_string(fixed);
+  tmp = fix_prefix(fixed+1);
+  ret = scm_from_locale_string(tmp);
   free(fixed);
   fixed = NULL;
 

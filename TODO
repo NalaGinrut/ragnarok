@@ -9,3 +9,6 @@
 
 * Acctual logger operation should delay to the end of page handler. 
   That means client should get response as soon as possible. 
+
+* Filter the target path, it should not appear '\n'
+

@@ -1,5 +1,5 @@
-CFLAGS := @GUILE_CFLAGS@ -r -MD 
-LIBS := @GUILE_LIBS@ -fPIC -shared
+CFLAGS := @GUILE_CFLAGS@ -fPIC -MD 
+LIBS := @GUILE_LIBS@ -shared
 LDFLAGS := @GUILE_LDFLAGS@ -fPIC -shared
 CC := @CC@
 CEE := cee
