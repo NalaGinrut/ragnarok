@@ -3,9 +3,6 @@ Makefile
 .deps
 .libs
 autom4te.cache
-config.sub
-config.guess
-config.status
 config.log
 config.h
 *.doc
