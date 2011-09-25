@@ -13,12 +13,10 @@ config.h
 *.lo
 *.la
 aclocal.m4
-libtool
 ltmain.sh
 depcomp
 missing
 mdate-sh
-install-sh
 texinfo.tex
 *~
 ,*
