@@ -22,7 +22,6 @@ confdefs.h
 config.build-subdirs
 config.cache
 config.h
-config.h.in
 config.log
 config.status
 conftest
