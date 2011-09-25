@@ -10,7 +10,6 @@ config.h
 *.lo
 *.la
 aclocal.m4
-ltmain.sh
 depcomp
 missing
 mdate-sh
@@ -27,7 +26,6 @@ config.status
 conftest
 conftest.c
 depcomp
-libtool
 ltconfig
 mdate-sh
 missing
