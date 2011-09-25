@@ -15,7 +15,6 @@ config.h
 aclocal.m4
 libtool
 ltmain.sh
-configure
 depcomp
 missing
 mdate-sh
