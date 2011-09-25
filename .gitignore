@@ -17,20 +17,13 @@ libtool
 ltmain.sh
 configure
 depcomp
-elisp-comp
 missing
 mdate-sh
 install-sh
 texinfo.tex
 *~
 ,*
-Makefile
 aclocal.m4
-autom4te.cache
-benchmark-guile
-check-guile
-check-guile.log
-build-aux/compile
 confdefs.h
 config.build-subdirs
 config.cache
@@ -51,8 +44,6 @@ ltmain.sh
 mdate-sh
 missing
 mkinstalldirs
-pre-inst-guile
-pre-inst-guile-env
 stamp-h1
 *.go
 cscope.out
@@ -74,3 +65,5 @@ cscope.files
 *.pgs
 *.rn
 *.rns
+*.scan
+*.am

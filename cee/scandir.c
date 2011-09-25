@@ -16,6 +16,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef HAVE_CONFIG_H
+#  include <config.h>
+#endif
+
 #include <libguile.h>
 #include <dirent.h>
 #include <malloc.h>
@@ -27,9 +31,7 @@ extern "C" {
 
 #define NAMLEN(dirent) strlen((dirent)->d_name)
   
-    //#if defined GUILE_USE_64_CALLS && GUILE_USE_64_CALLS && defined(HAVE_STAT64)
-    // FIXME: check 64bit if we have configure    
-#ifdef 	RAGNAROK_HAS_CONFIGURE
+#if defined GUILE_USE_64_CALLS && GUILE_USE_64_CALLS && defined(HAVE_STAT64)
 #define CHOOSE_LARGEFILE(foo,foo64)     foo64
 #else
 #define CHOOSE_LARGEFILE(foo,foo64)     foo

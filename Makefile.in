@@ -2,32 +2,50 @@ CFLAGS := @GUILE_CFLAGS@ -fPIC -MD
 LIBS := @GUILE_LIBS@ -shared
 LDFLAGS := @GUILE_LDFLAGS@ -fPIC -shared
 CC := @CC@
+OBJ := obj
 CEE := cee
 MOD := ragnarok
-OBJ := obj
-GUILEC := guild compile 
+MOD_OBJ := $(OBJ)/ragnarok
+BIN_OBJ := $(OBJ)/bin
+MOD_COMPILED_PATH := `guile -c "(display (car %load-compiled-path))"`
+MOD_TO_PUT := `guile -c "(display (car %load-path))"`
+MOD_PATH := $(PREFIX)/$(MOD_TO_PUT)
+MOD_TARGET_PATH := $(PREFIX)/$(MOD_COMPILED_PATH)
+GUILEC := guild compile
 V := @
 
-mod-cfile := $(wildcard $(MOD)/*.scm)
-mod-ofile := $(mod-cfile:.scm=.go)
-mod-ofile := $(subst $(MOD)/,$(OBJ)/,$(mod-ofile))
+mod-sfile := $(wildcard $(MOD)/*.scm)
+mod-ofile := $(mod-sfile:.scm=.go)
+mod-ofile := $(subst $(MOD)/,$(MOD_OBJ)/,$(mod-ofile))
 
--include $(CEE)/Makefile.mk
+ALL_TARGETS :=  $(OBJ)/libragnarok.so \
+		modules \
+		$(OBJ)/bin/ragnarok
 
-all: libragnarok.so modules
+all: $(ALL_TARGETS)
 
-$(OBJ)/%.go: $(MOD)/%.scm
-	@echo guilec +  @<
+include $(CEE)/Makefile.mk
+
+$(MOD_OBJ)/%.go: $(MOD)/%.scm
+	@echo guilec + $<
 	@mkdir -p $(@D)
 	$(V)$(GUILEC) -o $@ $<
 
-.PHONY: clean modules
+$(BIN_OBJ)/ragnarok: bin/ragnarok.c
+	@echo building Ragnarok ...
+	@mkdir -p $(@D)
+	$(V)$(CC) @GUILE_CFLAGS@ @GUILE_LIBS@ -o $@ $<
+
+.PHONY: clean modules install distclean distclean-mk bin
 
 clean:
 	rm -frd $(OBJ)
 
-install: $(OBJ)/libragnarok.so
+install: $(ALL_TARGETS)
 	install -m 644 $(OBJ)/*.so /usr/local/lib/
+	install -m 644 $(MOD) $(MOD_PATH)
+	install -m 644 $(MOD_OBJ) $(MOD_TARGET_PATH)
+	install -m 700 $(OBJ)/bin $(PREFIX)
 
 distclean: distclean-mk clean
 
@@ -35,3 +53,7 @@ distclean-mk:
 	rm -f Makefile
 
 modules: $(mod-ofile)
+	@echo $<
+
+bin: $(OBJ)/bin/ragnarok
+
