@@ -2,11 +2,16 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.65])
-AC_INIT([HFG Ragnarok], 
+AC_INIT([Ragnarok], 
 	m4_esyscmd([build-aux/git-version-gen .tarball-version]),
 	[nalaginrut@gmail.com])
-AC_CONFIG_SRCDIR([bin/ragnarok.c])
+AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([RAGNAROK-VERSION])
 AC_CONFIG_HEADERS([config.h])
+
+. $srcdir/RAGNAROK-VERSION
+RAGNAROK-VERSION="$PACKAGE_VERSION"
 
 # Checks for programs.
 AC_PROG_CXX
@@ -17,7 +22,6 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 
-AC_CONFIG_MACRO_DIR([m4])
 # Checks for libraries.
 
 # Checks for header files.
@@ -33,7 +37,19 @@ AC_CHECK_FUNCS([memchr])
 # Check for Guile
 PKG_CHECK_MODULES([GUILE], [guile-2.0])
 
-LT_INIT
+GUILE_PROGS
+GUILE_FLAGS
+GUILE_SITE_DIR
+
+LT_INIT([dlopen disable-fast-install disable-static win32-dll])
+
+RAGNAROK_WITH_LIBGCRYPT=0
+AC_ARG_ENABLE([libgcrypt],
+  [AS_HELP_STRING([--enable-libgcrypt],
+	          [Build with libgcrypt enabled (using ETAG must enable this)])],
+  if test "$enable_libgcrypt" = y || test "$enable_libgcrypt" = yes; then
+    RAGNAROK_WITH_LIBGCRYPT=1
+  fi)
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

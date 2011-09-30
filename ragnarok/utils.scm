@@ -18,6 +18,11 @@
 
 (module-export-all! (current-module))
 
+(define F_ULOCK 0)	;; Unlock a previously locked region.
+(define F_LOCK  1)	;; a region for exclusive use.  
+(define F_TLOCK 2)	;; and lock a region for exclusive use.
+(define F_TEST  3)	;; a region for other processes locks. 
+
 (define div-and-mod (@ (rnrs base) div-and-mod))
 
 (define get-config hash-ref)

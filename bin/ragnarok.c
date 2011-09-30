@@ -22,48 +22,24 @@
 
 #include <libguile.h>
 #include <stdio.h>
-#include <fcntl.h>
-#include <signal.h>
+#include <sys/types.h>
 #include <unistd.h>
-
-#define RUNNING_DIR	"/var/log/ragnarok"
-#define LOCK_FILE	"ragnarok.lock"
-#define LOG_FILE	"ragnarok.log"
 
 #define RAG_SYM(str) scm_string_to_symbol(scm_from_locale_string(str))
 
 #define RAG_GET_FROM_MODULE(m ,s)		\
   scm_variable_ref(scm_c_public_lookup((m) ,(s)))
 
-static void init_modules()
-{
-  //scm_c_use_module("ragnarok env");
-  //scm_c_use_module("ragnarok server");
-}
-
-void ragnarok_log_message(char *filename ,char *message)
-{
-  FILE *logfile;
-  
-  logfile = fopen(filename ,"a");
-  
-  if(!logfile)
-    return;
-
-  fprintf(logfile,"%s\n" ,message);
-
-  fclose(logfile);
-}
-
 void ragnarok_signal_handler(int sig)
 {
   switch(sig)
     {
     case SIGHUP:
-      ragnarok_log_message(LOG_FILE,"Ragnarok hangup");
+      //      ragnarok_log_message(LOG_FILE,"Ragnarok hangup");
       break;
     case SIGTERM:
-      ragnarok_log_message(LOG_FILE,"Ragnarok exit!");
+      //ragnarok_log_message(LOG_FILE,"Ragnarok exit!");
+      //ragnarok_unlock();
       exit(0);
       break;
     }
@@ -71,55 +47,15 @@ void ragnarok_signal_handler(int sig)
 
 void daemonize()
 {
-  int i ,lfp;
-  char buf[10] = {0};
-
-  if(getppid() == 1)
-    {
-      printf("Ragnarok's already run!\n");
-      exit(5); /* already a daemon */
-    }
- 
-  i = fork();
-
-  if (i < 0)
-    {
-      printf("Ragnarok daemon fork error!");
-      exit(1); /* fork error */
-    }
-  else if(i > 0)
-    exit(0); /* parent exits */
-
-  /* child (daemon) continues */
-  setsid(); /* obtain a new process group */
-
-  for (i=0 ;i<3 ;i++)
-    close(i); /* close all descriptors */
-
-  i = open("/dev/null",O_RDWR);
-  dup(i);
-  dup(i); /* TRICK: handle standard I/O */
-  umask(022); /* set newly created file permissions */
-
-  chdir(RUNNING_DIR); /* change running directory */
-  lfp = open(LOCK_FILE ,O_RDWR|O_CREAT ,0640);
-
-  if(lfp < 0)
-    exit(2); /* can not open */
-
-  if(lockf(lfp ,F_TLOCK ,0) < 0)
-    exit(0); /* can not lock */
-
-  /* first instance continues */
-  sprintf(buf ,"%d\n" ,getpid());
-  write(lfp ,buf ,strlen(buf));
-  
   signal(SIGCHLD ,SIG_IGN); /* ignore child */
-  signal(SIGTSTP ,SIG_IGN); /* ignore tty signals */
-  signal(SIGTTOU ,SIG_IGN);
-  signal(SIGTTIN ,SIG_IGN);
+  //signal(SIGTSTP ,SIG_IGN); /* ignore tty signals */
+  //signal(SIGTTOU ,SIG_IGN);
+  //signal(SIGTTIN ,SIG_IGN);
   signal(SIGHUP  ,ragnarok_signal_handler); /* catch hangup signal */
   signal(SIGTERM ,ragnarok_signal_handler); /* catch kill signal */
+
+  printf("ok 15\n");
+
 }
 
 static void ragnarok_go()
@@ -132,8 +68,11 @@ static void ragnarok_go()
 
 static void ragnarok_init()
 {
-  //scm_init_guile();
-  daemonize();
+  if(getppid() == 1)
+    {
+      printf("Ragnarok's already run!\n");
+      exit(5); /* already a daemon */
+    }	
 }
   
 static void inner_main(void *closure, int argc, char **argv)
@@ -141,10 +80,7 @@ static void inner_main(void *closure, int argc, char **argv)
   /* module initializations would go here */
 
   ragnarok_init();
-  init_modules();
   ragnarok_go();
-  //scm_shell (argc, argv);
-
 }
 
 int main(int argc, char **argv)

@@ -4,21 +4,26 @@ LDFLAGS := @GUILE_LDFLAGS@ -fPIC -shared
 CC := @CC@
 OBJ := obj
 CEE := cee
+TOP := $(shell pwd)
 MOD := ragnarok
 MOD_OBJ := $(OBJ)/ragnarok
 BIN_OBJ := $(OBJ)/bin
-MOD_COMPILED_PATH := `guile -c "(display (car %load-compiled-path))"`
-MOD_TO_PUT := `guile -c "(display (car %load-path))"`
-MOD_PATH := $(PREFIX)/$(MOD_TO_PUT)
-MOD_TARGET_PATH := $(PREFIX)/$(MOD_COMPILED_PATH)
+MOD_COMPILED_PATH := $(shell guile -c "(display %compile-fallback-path)")
+MOD_PATH := $(shell guile -c "(display (car %load-path))")
+MOD_TARGET_PATH := $(MOD_COMPILED_PATH)/$(MOD_PATH)/ragnarok
 GUILEC := guild compile
+GUILE := @GUILE@
+VERSION := @PACKAGE_VERSION@
+PREFIX := @prefix@
+INSTALL := install -c
 V := @
 
-mod-sfile := $(wildcard $(MOD)/*.scm)
-mod-ofile := $(mod-sfile:.scm=.go)
+mod-sfile := $(shell find $(MOD) -name *.scm)
+mod-ofile := $(mod-sfile:.scm=.scm.go)
 mod-ofile := $(subst $(MOD)/,$(MOD_OBJ)/,$(mod-ofile))
 
 ALL_TARGETS :=  $(OBJ)/libragnarok.so \
+		version \
 		modules \
 		$(OBJ)/bin/ragnarok
 
@@ -26,34 +31,51 @@ all: $(ALL_TARGETS)
 
 include $(CEE)/Makefile.mk
 
-$(MOD_OBJ)/%.go: $(MOD)/%.scm
-	@echo guilec + $<
+$(MOD_OBJ)/%.scm.go: $(MOD)/%.scm
+	@echo + guilec $<
 	@mkdir -p $(@D)
-	$(V)$(GUILEC) -o $@ $<
+	@GUILE_AUTO_COMPILE=0
+	$(V)$(GUILEC) -L $(TOP) -o $@ $<
 
 $(BIN_OBJ)/ragnarok: bin/ragnarok.c
 	@echo building Ragnarok ...
 	@mkdir -p $(@D)
 	$(V)$(CC) @GUILE_CFLAGS@ @GUILE_LIBS@ -o $@ $<
 
-.PHONY: clean modules install distclean distclean-mk bin
+$(MOD)/version.scm:
+	$(V)$(GUILE) -c '(call-with-output-file "$@" (lambda (port) (format port "(define-module (ragnarok version) #:export (ragnarok-version)) (define ragnarok-version \"Ragnarok ~a\")" "$(VERSION)")))'
+
+.PHONY: clean modules install distclean distclean-mk bin version test
 
 clean:
-	rm -frd $(OBJ)
+	-rm -frd $(OBJ)
+	-rm -frd *.log
+	-rm -rf autom4te.cache
+	-rm -rf $(MOD)/version.scm
+	-rm -rf config.h
 
 install: $(ALL_TARGETS)
-	install -m 644 $(OBJ)/*.so /usr/local/lib/
-	install -m 644 $(MOD) $(MOD_PATH)
-	install -m 644 $(MOD_OBJ) $(MOD_TARGET_PATH)
-	install -m 700 $(OBJ)/bin $(PREFIX)
+	cp -frdp $(OBJ)/*.so /usr/local/lib/
+	cp -frdp $(MOD) $(MOD_PATH)
+	$(INSTALL) -m 755 -d $(MOD_TARGET_PATH)
+	cp -frdp $(MOD_OBJ)/* $(MOD_TARGET_PATH)
+	$(INSTALL) -m 755 $(OBJ)/bin/* $(PREFIX)/bin
 
 distclean: distclean-mk clean
 
 distclean-mk:
-	rm -f Makefile
+	-rm -f Makefile
 
 modules: $(mod-ofile)
-	@echo $<
+
+version: $(MOD)/version.scm
 
 bin: $(OBJ)/bin/ragnarok
 
+test:
+	@echo $(PREFIX)
+	@echo $(MOD_COMPILED_PATH)
+	@echo $(CC)
+	@echo $(CFLAGS)
+	@echo $(GUILE)
+	@echo $(VERSION)

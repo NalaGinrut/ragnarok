@@ -42,17 +42,26 @@ available_tags="CXX "
 macro_version=2.2.6b
 macro_revision=1.3017
 
+# Whether or not to optimize for fast installation.
+fast_install=no
+
+# Whether or not to build static libraries.
+build_old_libs=no
+
+# Assembler program.
+AS=as
+
+# DLL creation program.
+DLLTOOL=dlltool
+
+# Object dumper program.
+OBJDUMP=objdump
+
 # Whether or not to build shared libraries.
 build_libtool_libs=yes
 
-# Whether or not to build static libraries.
-build_old_libs=yes
-
 # What type of objects to build.
 pic_mode=default
-
-# Whether or not to optimize for fast installation.
-fast_install=yes
 
 # The host system.
 host_alias=
@@ -106,9 +115,6 @@ NL2SP="tr \\015\\012 \\040\\040"
 # How to create reloadable object files.
 reload_flag=" -r"
 reload_cmds="\$LD\$reload_flag -o \$output\$reload_objs"
-
-# An object symbol dumper.
-OBJDUMP="objdump"
 
 # Method to check whether dependent libraries are shared objects.
 deplibs_check_method="pass_all"
@@ -240,13 +246,13 @@ sys_lib_search_path_spec="/usr/lib/gcc/i486-linux-gnu/4.4.3 /usr/lib /lib /usr/l
 sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/nvidia-current /lib/i486-linux-gnu /usr/lib/i486-linux-gnu /usr/lib/alsa-lib /usr/local/lib /usr/lib/root "
 
 # Whether dlopen is supported.
-dlopen_support=unknown
+dlopen_support=yes
 
 # Whether dlopen of programs is supported.
-dlopen_self=unknown
+dlopen_self=yes
 
 # Whether dlopen of statically linked programs is supported.
-dlopen_self_static=unknown
+dlopen_self_static=no
 
 # Commands to strip libraries.
 old_striplib="strip --strip-debug"

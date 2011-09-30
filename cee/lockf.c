@@ -21,16 +21,39 @@
 #endif
 
 #include <libguile.h>
+#include <unistd.h>
 
-SCM scm_mmr_path_fix(SCM target);
-SCM scm_mmr_scandir(SCM dir ,SCM filter);
-SCM scm_mmr_check_file_perms(SCM target ,SCM perms);
-SCM scm_mmr_lockf(SCM fd ,SCM cmd ,SCM len);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void init_lib()
+SCM scm_mmr_lockf(SCM fd ,SCM cmd ,SCM len)
+#define FUNC_NAME "lockf"
 {
-  scm_c_define_gsubr("path-fix" ,1 ,0 ,0 ,scm_mmr_path_fix);
-  scm_c_define_gsubr("check-file-perm" ,2 ,0 ,0 ,scm_mmr_check_file_perms);
-  scm_c_define_gsubr("scandir" ,1 ,1 ,0 ,scm_mmr_scandir);
-  scm_c_define_gsubr("lockf" ,2 ,1 ,0 ,scm_mmr_lockf);
+  int l = 0;
+  int d = 0;
+  int c = 0;
+  int ret;
+  
+  SCM_VALIDATE_NUMBER(1 ,fd);
+  SCM_VALIDATE_NUMBER(2 ,cmd);
+
+  if(!SCM_UNBNDP(len))
+    {
+      SCM_VALIDATE_NUMBER(3 ,len);
+      l = scm_to_int(len);
+    }
+
+  d = scm_to_int(fd);
+  c = scm_to_int(cmd);
+  ret = lockf(d ,c ,l);
+  
+  return scm_from_int(ret);
 }
+#undef FUNC_NAME
+  
+#ifdef __cplusplus
+}
+#endif
+
+
