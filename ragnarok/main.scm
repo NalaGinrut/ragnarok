@@ -14,6 +14,7 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok main)
+  #:use-module (ragnarok env)
   #:use-module (ragnarok server)
   #:use-module (ragnarok version)
   #:use-module (ragnarok utils)
@@ -22,14 +23,24 @@
   #:export (main)
   )
 
+(define ragnarok-env (make <env>))
+
 (define *ragnarok-running-dir* "/var/log/ragnarok")
-(define *ragnarok-lock-file* "ragnarok.lock")
-(define *ragnarok-log-file* "ragnarok.log")
-(define *ragnarok-err-log-file* "ragnarok.err")
+(define make-ragnarok-sys-file
+  (lambda (filename)
+    (string-append *ragnarok-running-dir* "/" filename)))
+(define *ragnarok-lock-file* 
+  (make-ragnarok-sys-file "ragnarok.lock"))
+(define *ragnarok-log-file* 
+  (make-ragnarok-sys-file "ragnarok.log"))
+(define *ragnarok-err-log-file* 
+  (make-ragnarok-sys-file "ragnarok.err"))
 
 (define (ragnarok-unlock)
-  (unlink (string-append *ragnarok-running-dir* 
-			 *ragnarok-err-log-file*)))
+  (let ([lfp (open *ragnarok-lock-file* O_RDWR)])
+    (flock lfp LOCK_UN)
+    (close lfp))
+  (delete-file *ragnarok-lock-file*))
 
 (define option-spec
   '((version (single-char #\v) (value #f))
@@ -52,7 +63,7 @@ Usage: ragnarok [OPTIONS]...
 
 Any bug/improve report will be appreciated.
 Author: NalaGinrut@gmail.com
-God bless hacking. 
+God bless hacking.\n
 ")
 
 (define version-str
@@ -73,22 +84,60 @@ God bless hacking."
 
 (define (show-help)
   (display help-str)
-  (primitive-exit 0)
+  (exit)
   )
 
 (define (show-version)
-  (display ragnarok-version)
-  (primitive-exit 0)
+  (display version-str)
+  (exit)
   )
 
-(define ragnarok_log_message
+(define ragnarok-log-message
   (lambda (message)
-    (let ([lf (open-file *ragnarok-log-file* "a")])
-      (if (not lf)
-	  (format lf "~a~%" message))
+    (let* ([lf (open-file *ragnarok-log-file* "a")]
+	  [cgt (get-global-current-time)]
+	  )
+      (if lf
+	  (format lf "~a at ~a~%" message cgt))
       (close lf)
       )))
-	  
+
+(define (ragnarok-kill-all-servers)
+  (let ([server-list (env:server-list ragnarok-env)])
+    (for-each (lambda (s-pair)
+		(server:down (cdr s-pair)))
+	      server-list)))
+
+(define (ragnarok-terminate-environ)
+  ;; TODO: terminate environ
+  (ragnarok-kill-all-servers)
+  )
+
+(define ragnarok-SIGHUP-handler
+  (lambda (msg)
+    (ragnarok-log-message "Ragnarok hangup!")
+    ;; TODO: deal with hangup
+    ))
+
+(define ragnarok-SIGTERM-handler
+  (lambda (msg)
+    (ragnarok-log-message "Ragnarok exit!");
+    (ragnarok-terminate-environ)
+    (ragnarok-unlock)
+    (sync)
+    ;;(format #t "well~quit")
+    (exit)
+    ))
+
+(define (signal-register)
+  (sigaction SIGCHLD SIG_IGN) ;; ignore child
+  (sigaction SIGTSTP SIG_IGN) ;; ignore tty signals
+  (sigaction SIGTTOU SIG_IGN) ;; 
+  (sigaction SIGTTIN SIG_IGN) ;;
+  (sigaction SIGHUP ragnarok-SIGHUP-handler) ;; catch hangup signal
+  (sigaction SIGTERM ragnarok-SIGTERM-handler) ;; catch kill signal
+  )
+
 (define main
   (lambda (args)
     (let* ((options 
@@ -108,43 +157,46 @@ God bless hacking."
        (need-version? (show-version)))
       
       ;; daemonize
-
-      (cond
-       ((> (fork) 0) (primitive-exit 0)) ;; exit parent
-       ((< (fork) 0) (error "Ragnarok: fork error!")))
+      (let ([i (primitive-fork)])
+	(cond
+	 ((> i 0) (exit)) ;; exit parent
+	 ((< i 0) (error "Ragnarok: fork error!")))
+	)
 
       ;; child(daemon) continue
       (setsid)
       (chdir *ragnarok-running-dir*)
 
       (let* ([i (open "/dev/null" O_RDWR)]
-	     [e (open *ragnarok-err-log-file* O_RDWR)] 
+	     [e (open *ragnarok-err-log-file* (logior O_CREAT O_RDWR))] 
 	     [lfp (open *ragnarok-lock-file* 
-			(or O_RDWR O_CREAT)
+			(logior O_RDWR O_CREAT)
 			#o640)]
 	     )
-
-	(dup2 0 i) ;; stdin
-	(dup2 2 e) ;; stderr
+	
+	;;(for-each close (iota 3)) ;; close all ports
+	(redirect-port i (current-input-port)) ;; stdin
+	(redirect-port e (current-output-port))
+	(redirect-port e (current-error-port)) ;; stderr
 	(umask 022)
 	
-	(cond
-	 ((< lfp 0)
-	  (display "Ragnarok: can not open/create lock file!\n")
-	  (primitive-exit 2))
-	 ((< (lockf lfp F_TLOCK) 0)
-	  (display "Ragnarok: can not lock!\n")
-	  (primitive-exit 3)))
+	(if (< (port->fdes lfp) 0)
+	    (begin
+	      (display "Ragnarok: can not open/create lock file!\n")
+	      (exit 2)))
 
-	(write lfp (getpid))
+	(flock lfp LOCK_EX)
+	
+	(write (getpid) lfp)
 	(close lfp)
 	)
 
       ;; TODO: signal handler register
- 
+      (signal-register)
+
       ;; TODO: overload cmd parameters to default parameters
       ;;       #f for default ,otherwise overload it.
 
-      ;;(let ((server (make <server>)))
-      ;; (server:run server))
+      (let ((server (make <server>)))
+	(server:run server))
     )))

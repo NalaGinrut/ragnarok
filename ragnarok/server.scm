@@ -24,7 +24,7 @@
   #:export (<server>
 	    server:socket server:config server:handler
 	    server:logger server:run server:show-config
-	    server:get-config
+	    server:get-config server:down
 	    )
   )
 
@@ -64,7 +64,6 @@
 	(error initialize "<server>: protocol hasn't been implemented yet!" protocol))
     ))
 
-
 (define-method (server:get-config (self <server>) var)
   (let ((conf (server:config self)))
     ;; FIXME: I need an exception catch
@@ -75,7 +74,17 @@
 (define-method (server:show-config (self <server>))
   (let ([config (server:config self)])
     (print-conf-table config)))
-	    
+
+(define-method (server:down (self <server>))
+  ;; TODO: log server down infomation
+  (server:print-status self
+		       'server-down
+		       (format #f "Sub-server - ~s is down!~%"
+			       (server:name self)))
+    ;; NOTE: DO NOT close listen socket here. Because Guile will
+    ;;       deal with this automatically. Or it'll cause error.
+  )
+
 (define-method (server:run (self <server>))
   (let* ([port (server:get-config self 'port)]
 	 [s (server:listen-port self port)]
@@ -85,21 +94,22 @@
 	 )
     ;; response loop
     (let active-loop ()
-      (let* ([client-connection (accept s)]
-	     [client-details (cdr client-connection)]
-	     [conn-socket (car client-connection)]
-	     )
-	;; FIXME: checkout the validity
-	(server:print-status self 
-			     'client-info 
-			     (get-client-info client-details))
-	;; FIXME: I need to spawn new thread for a request-handler
-	(request-handler config logger conn-socket)
-	(shutdown conn-socket 2) ;; can be closed after trans finished.
-	;;(close-port conn-socket)      
-	)
-      (active-loop)
-      )))
+      (if (not (port-closed? s))
+	  (let* ([client-connection (accept s)]
+		 [client-details (cdr client-connection)]
+		 [conn-socket (car client-connection)]
+		 )
+	    ;; FIXME: checkout the validity
+	    (server:print-status self 
+				 'client-info 
+				 (get-client-info client-details))
+	    ;; FIXME: I need to spawn new thread for a request-handler
+	    (request-handler config logger conn-socket)
+	    (shutdown conn-socket 2) ;; can be closed after trans finished.
+	    ;;(close-port conn-socket)      
+	    (active-loop)
+	    )
+	  ))))
 
 (define get-client-info
   (lambda (client-details)
@@ -118,6 +128,7 @@
 	 [time (msg-time-stamp)]
 	 [msg (make-log-msg time type info)]
 	 )
+    ;; TODO: It MUST BE an exclusive logger file accession.
     (logger:printer logger msg)))
     
 ;; listen in the port then return the socket

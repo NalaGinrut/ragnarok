@@ -18,6 +18,8 @@
 
 (module-export-all! (current-module))
 
+(dynamic-call "init_lib" (dynamic-link "libragnarok"))
+
 (define F_ULOCK 0)	;; Unlock a previously locked region.
 (define F_LOCK  1)	;; a region for exclusive use.  
 (define F_TLOCK 2)	;; and lock a region for exclusive use.
@@ -25,7 +27,17 @@
 
 (define div-and-mod (@ (rnrs base) div-and-mod))
 
+(define get-bytevector-all (@ (rnrs io ports) get-bytevector-all))
+
 (define get-config hash-ref)
+
+(define touch 
+  (lambda (file)
+    (close (open file O_CREAT))
+    ))
+    
+(define (get-global-current-time)
+  (strftime "%c" (gmtime (current-time ))))
 
 (define-syntax space-skip
   (syntax-rules ()

@@ -30,15 +30,20 @@
 extern "C" {
 #endif
 
+#define PERMS_A	07   // anyone
+#define PERMS_U 070  // user
+#define PERMS_R 0700 // root
+  
 SCM scm_mmr_check_file_perms(SCM target ,SCM perms)
-#define FUNC_NAME "path-fix"
+#define FUNC_NAME "check-file-perms"
 {
   int p = 0;
   char *filename = NULL;
   SCM ret = SCM_BOOL_F;
   struct stat sb;
   int mode = 0;
-  
+  int pa = 0 ,pu = 0 ,pr = 0;
+    
   SCM_VALIDATE_STRING(1 ,target);
   SCM_VALIDATE_NUMBER(2 ,perms);
 
@@ -54,9 +59,16 @@ SCM scm_mmr_check_file_perms(SCM target ,SCM perms)
     }
 
   mode = sb.st_mode;
-
-  if(!(mode ^ p))
-    ret = SCM_BOOL_T;
+  pa = PERMS_A | p;
+  pu = PERMS_U | p;
+  pr = PERMS_R | p;
+  
+  if((!(mode ^ pa)) ||
+     (!(mode ^ pu)) ||
+     (!(mode ^ pr)))
+    {
+      ret = SCM_BOOL_T;
+    }
   
  end:
   scm_dynwind_end();

@@ -22,41 +22,12 @@
 
 #include <libguile.h>
 #include <stdio.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include <stdlib.h>
 
 #define RAG_SYM(str) scm_string_to_symbol(scm_from_locale_string(str))
 
 #define RAG_GET_FROM_MODULE(m ,s)		\
   scm_variable_ref(scm_c_public_lookup((m) ,(s)))
-
-void ragnarok_signal_handler(int sig)
-{
-  switch(sig)
-    {
-    case SIGHUP:
-      //      ragnarok_log_message(LOG_FILE,"Ragnarok hangup");
-      break;
-    case SIGTERM:
-      //ragnarok_log_message(LOG_FILE,"Ragnarok exit!");
-      //ragnarok_unlock();
-      exit(0);
-      break;
-    }
-}	
-
-void daemonize()
-{
-  signal(SIGCHLD ,SIG_IGN); /* ignore child */
-  //signal(SIGTSTP ,SIG_IGN); /* ignore tty signals */
-  //signal(SIGTTOU ,SIG_IGN);
-  //signal(SIGTTIN ,SIG_IGN);
-  signal(SIGHUP  ,ragnarok_signal_handler); /* catch hangup signal */
-  signal(SIGTERM ,ragnarok_signal_handler); /* catch kill signal */
-
-  printf("ok 15\n");
-
-}
 
 static void ragnarok_go()
 {

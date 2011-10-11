@@ -75,6 +75,9 @@
 (define *Gateway-Timeout* 504)
 (define *Version-Not-Supported* 505)
 
+;; Server Extended (only ragnarok)
+(define *Fork-Error* 1500)
+
 ;;----------Status Code End-------------
 
 (define *status-list*
@@ -128,6 +131,8 @@
     (504 ("Gateway Timeout" "*Status-504* Gateway Timeout!" "504.html"))
     (505 ("HTTP Version Not Supported"
 	  "*Status-505* HTTP Version Not Supported!" #f))
+    ;; 15xx
+    (1500 ("Fork Error" "*Status-1500* Fork Error!" #f))
     ))
 
 (define http-get-reason-from-status
