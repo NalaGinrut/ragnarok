@@ -28,6 +28,7 @@
 (define div-and-mod (@ (rnrs base) div-and-mod))
 
 (define get-bytevector-all (@ (rnrs io ports) get-bytevector-all))
+(define bytevector-length (@ (rnrs bytevectors) bytevector-length))
 
 (define get-config hash-ref)
 

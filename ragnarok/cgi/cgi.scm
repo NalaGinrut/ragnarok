@@ -73,15 +73,20 @@
 	  (close (current-output-port))
 	  )))
        
+      ;; NOTE: parent must wait child terminate, 
+      ;;       or get-bytevector-all will be blocked.
       (waitpid i)
-      (let* ([bv (read r)];;(get-bytevector-all r)]
-	     ;;[size (bytevector-length bv)]
+      
+      ;; NOTE: we must close input pipe ,or get-bytevector-all will be blocked.
+      ;; I wonder if this is a bug.
+      (close w) 
+      (let* ([bv (get-bytevector-all r)]
+	     [size (bytevector-length bv)]
 	     [fst (stat (cgi:target cgi))]
 	     )
-	bv
-	;; (values bv
-	;;*OK*
-	;;(record-real-bv-size fst size))
+	(values bv
+		*OK*
+		(record-real-bv-size fst size))
 	))))
 		    
 (define ragnarok-regular-cgi-handler
