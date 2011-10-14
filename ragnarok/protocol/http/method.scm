@@ -18,7 +18,7 @@
   #:use-module (ragnarok protocol http status)
   #:use-module (ragnarok protocol http handler)
   #:use-module (ragnarok utils)
-  #:export ( http-get-method-handler
+  #:export ( http-method-handler-get
 	     http-method-POST-handler
 	     http-method-DELETE-handler
 	     http-method-HEAD-handler
@@ -36,61 +36,70 @@
 (define gcrypt:sha1 (@ (gcrypt mda) gcrypt:sha1))
 (define uri-path (@ (web uri) uri-path))
 (define request-uri (@ (web request) request-uri))
-(define bytevector-length (@ (rnrs bytevectors) bytevector-length))
 
-(define http-get-method-handler
+(define http-method-handler-get
   (lambda (method)
     (get-arg *method-handler-list* method)))
 
+(define run-with-handler?
+  (lambda (ext config)
+    (let ([ext-list (get-config config 'script-ext)])
+      (list-has? ext-list ext)
+      )))
+
 (define http-method-POST-handler
-  (lambda (config logger request)
+  (lambda (config logger server-info)
     #t
     ))
 
 (define http-method-DELETE-handler
-  (lambda (config logger request)
+  (lambda (config logger server-info)
     #t
     ))
 
 ;; returned as GET but without content
 (define http-method-HEAD-handler
-  (lambda (config logger request)
+  (lambda (config logger server-info)
     ;; NOTE: We must read out the content of file, because we need to
     ;;       generate ETAG.
     (call-with-values
 	(lambda ()
-	  (http-method-GET-handler config logger request))
+	  (http-method-GET-handler config logger server-info))
       (lambda (bv bv-len status type etag mtime)
        	(values #f bv-len status type etag mtime)))
     ))
 
 (define http-method-PUT-handler
-  (lambda (config logger request)
+  (lambda (config logger server-info)
     #t
     ))
 (define http-method-CONNECT-handler
-  (lambda (config logger request)
+  (lambda (config logger server-info)
     #t
     ))
 (define http-method-OPTIONS-handler
-  (lambda (config logger request)
+  (lambda (config logger server-info)
     #t
     ))
 (define http-method-TRACE-handler
-  (lambda (config logger request)
+  (lambda (config logger server-info)
     #t
     ))
 (define http-method-PATCH-handler
-  (lambda (config logger request)
+  (lambda (config logger server-info)
     #t
     ))
 
 (define http-method-GET-handler
-  (lambda (config logger request)
-    (let* ([path (uri-path (request-uri request))]
+  (lambda (config logger server-info)
+    (let* ([remote-info (server-info:remote-info server-info)]
+	   [target (remote-info:target remote-info)]
 	   [root-path (get-config config 'root-path)]
-	   [file (string-append root-path path)]
-	   	   
+	   [file (string-append root-path target)]
+	   [script-ext (get-config config 'script-ext)]
+	   [use-cgi (get-config config 'cgi)]
+	   [script-run-with-handler (run-with-handler? ext config)]
+	   
 	   ;; FIXME: I need this m-handler later
 	   [mime (get-request-mime file)]
 	   [m-handler (get-mime-handler mime)]
@@ -103,9 +112,15 @@
 	  (lambda ()
 	    (case mime
 	      ((*directory*) 
-	       (http-directory-serv-handler logger file))
+	       (http-directory-serv-handler logger file server-info))
 	      ((*no-such-file*) 
-	       (http-error-page-serv-handler logger *Not-Found*))
+	       (http-error-page-serv-handler logger *Not-Found* server-info))
+	      ((not m-handler)
+	       (if script-run-with-handler
+		   (http-regular-cgi-handler logger file server-info)
+		   (http-error-page-serv-handler logger 
+						 *CGI-Not-Allowed*
+						 server-info)))
 	      (else
 	       ;; deal with files
 	       (m-handler logger file)

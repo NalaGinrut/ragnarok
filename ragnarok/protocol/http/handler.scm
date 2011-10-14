@@ -16,6 +16,9 @@
 (define-module (ragnarok protocol http handler)
   #:use-module (ragnarok protocol http status)
   #:use-module (ragnarok protocol http log)
+  #:use-module (ragnarok cgi cgi)
+  #:use-module (ragnarok info)
+  #:use-module (ragnarok version)
   #:use-module (ragnarok utils)
   )
 
@@ -24,8 +27,6 @@
 (define open-pipe (@ (ice-9 popen) open-pipe))
 (define close-pipe (@ (ice-9 popen) close-pipe))
 (define read-line (@ (ice-9 rdelim) read-line))
-(define get-bytevector-all (@ (rnrs io ports) get-bytevector-all))
-(define string->utf8 (@ (rnrs bytevectors) string->utf8))
 
 ;; NOTE: each serv-handler returns 3 values, bv&status&file-stat
 ;;-------serv handler-----------------
@@ -43,9 +44,69 @@
 	(http-response-log logger status)
 	(values bv status #f))) ;; return fst as #f, then we could deal with dir.
     ))
-     
+    
+(define http-regular-cgi-handler
+  (lambda (logger filename server-info)
+    (call-with-values
+	(lambda ()
+	  (if (file-exists? filename)
+	      (let* ([remote-info (server-info:remote-info server-info)]
+		     [auth-type (remote-info:auth-type remote-info)]
+		     [content-length (remote-info:content-length remote-info)]
+		     [content-type (remote-info:content-type remote-info)]
+		     ;;[gateway-interface #f]
+		     ;;[path-info #f]
+		     ;;[path-translated #f]
+		     [query-string (remote-info:query-string remote-info)]
+		     [remote-addr (remote-info:remote-addr remote-info)]
+		     [remote-host (remote-info:remote-host remote-info)]
+		     ;;[remote-ident #f]
+		     [remote-user (remote-info:remote-user remote-info)]
+		     [request-method (remote-info:request-method remote-info)]
+		     ;;[script-name #f]
+		     [subserver-info (server-info:subserver-info server-info)]
+		     [server-name (subserver-info:server-name subserver-info)]
+		     [server-port (subserver-info:server-port subserver-info)]
+		     [server-protocol 
+		      (subserver-info:server-protocol subserver-info)]
+		     [server-software 
+		      (subserver-info:server-software subserver-info)] 
+		     [env-table (make-hash-table 17)]
+		     )
+
+		;; init CGI env vars
+		(cgi:auth-type! env-table auth-type)
+		(cgi:content-type! env-table content-type)
+		(cgi:content-length! env-table content-length)
+		;;(cgi:gateway-interface! env-table gateway-interface)
+		;;(cgi:path-info! env-table path-info)
+		;;(cgi:path-translated! env-table path-translated)
+		(cgi:query-string! env-table query-string)
+		(cgi:remote-addr! env-table remote-addr)
+		(cgi:remote-host! env-table remote-host)
+		;;(cgi:remote-ident! env-table remote-ident)
+		(cgi:remote-user! env-table remote-user)
+		(cgi:request-method! env-table request-method)
+		;;(cgi:script-name! env-table script-name)
+		(cgi:server-name! env-table server-name)
+		(cgi:server-port! env-table server-port)
+		(cgi:server-protocol! env-table server-protocol)
+		(cgi:server-software! env-table server-software)
+
+		(ragnarok-regular-cgi-handler
+		 (make-cgi-record target env-table conn-socket)))
+	      );; end let*
+	  ;; file doesn't exist ,throw *Not-Found*
+	  (http-error-page-serv-handler logger *Not-Found*)
+	  );; end lambda()
+      (lambda (bv status fst)
+	(http-response-log logger status)
+	(values bv status fst))
+      );; end call-with-values
+    ))
+
 (define http-error-page-serv-handler
-  (lambda (logger status)
+  (lambda (logger status server-info)
     (let* ([stat-file (http-get-stat-file-from-status status)]
 	   [stat-html (string-append *status-page-dir*
 				     stat-file)]
@@ -57,7 +118,7 @@
       )))
       
 (define http-static-page-serv-handler
-  (lambda (logger filename)
+  (lambda (logger filename server-info)
     (call-with-values
 	(lambda ()
 	  (if (file-exists? filename)
@@ -72,22 +133,24 @@
     ))
     
 (define http-dynamic-page-serv-handler
-  (lambda (logger filename)
+  (lambda (logger filename server-info)
     (call-with-values
 	(lambda ()
-	  (if (file-exists? filename)
-	      (get-static-page logger filename)
-	      (http-error-page-serv-handler logger *Not-Found*)
-	      ;;Don't remove this exception handle, in case the file is deleted
-	      ;;but it passed the first check
-	      ))
+	  (cond
+	   ((not(file-exists? filename))
+	    (http-error-page-serv-handler logger *Not-Found*))
+	   ((file-is-exec-script? filename)
+	    (get-dynamic-page logger filename)
+	    ;;Don't remove this exception handle, in case the file is deleted
+	    ;;but it passed the first check
+	    ))
       (lambda (bv status fst)
 	(http-response-log logger status)
 	(values bv status fst)))
 
   ;;(make-serv-handler logger filename get-dynamic-page)
   ;; TODO: search file and call templete handler to render cgi script
-  ))
+  )))
 ;;-------serv handler end-----------------
 
 

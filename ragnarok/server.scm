@@ -21,13 +21,13 @@
   #:use-module (ragnarok handler)
   #:use-module (ragnarok log)
   #:use-module (ragnarok utils)
+  #:use-module (ragnarok version)
   #:export (<server>
 	    server:socket server:config server:handler
 	    server:logger server:run server:show-config
 	    server:get-config server:down
 	    )
   )
-
 
 (define-class <server> (<env>)
   ;; FIXME: support server name later. 
@@ -86,25 +86,30 @@
   )
 
 (define-method (server:run (self <server>))
-  (let* ([port (server:get-config self 'port)]
-	 [s (server:listen-port self port)]
+  (let* ([server-port (server:get-config self 'port)]
+	 [server-protocol (server:get-config self 'proto)]
+	 [server-name (server:name self)]
+	 [server-software *ragnarok-version*]
+	 [subserver-info 
+	  (make-subserver-info server-port server-protocol
+			       server-name server-software)]
+	 [s (server:listen-port self server-port)]
 	 [request-handler (server:handler self)]
 	 [config (server:config self)]
 	 [logger (server:logger self)]
-	 )
+	 	 )
     ;; response loop
     (let active-loop ()
       (if (not (port-closed? s))
 	  (let* ([client-connection (accept s)]
 		 [client-details (cdr client-connection)]
-		 [conn-socket (car client-connection)]
 		 )
 	    ;; FIXME: checkout the validity
 	    (server:print-status self 
 				 'client-info 
 				 (get-client-info client-details))
 	    ;; FIXME: I need to spawn new thread for a request-handler
-	    (request-handler config logger conn-socket)
+	    (request-handler config logger client-connection subserver-info)
 	    (shutdown conn-socket 2) ;; can be closed after trans finished.
 	    ;;(close-port conn-socket)      
 	    (active-loop)

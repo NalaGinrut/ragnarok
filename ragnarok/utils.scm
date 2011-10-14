@@ -27,7 +27,10 @@
 
 (define div-and-mod (@ (rnrs base) div-and-mod))
 
+(define string->utf8 (@ (rnrs bytevectors) string->utf8))
+
 (define get-bytevector-all (@ (rnrs io ports) get-bytevector-all))
+
 (define bytevector-length (@ (rnrs bytevectors) bytevector-length))
 
 (define get-config hash-ref)
@@ -39,6 +42,23 @@
     
 (define (get-global-current-time)
   (strftime "%c" (gmtime (current-time ))))
+
+(define search-from-list
+  (lambda (l e)
+       (call/cc
+	(lambda (return)
+	  (let lp ((ll l) (n 0))
+	    (cond
+	     ((null? ll)
+	      (return #f))
+	     ((equal? (car ll) e)
+	      (return n))
+	     (else
+	      (lp (cdr ll) (1+ n))
+	      )))))
+       ))
+
+(define list-has? search-from-list)
 
 (define-syntax space-skip
   (syntax-rules ()
@@ -62,7 +82,7 @@
 
 (define-syntax unless
   (syntax-rules ()
-    ((unless test result1 result2 ...)
+    ((_ test result1 result2 ...)
      (if (not test) (begin result1 result2 ...)))))
 
 (define-syntax define-syntax-rule

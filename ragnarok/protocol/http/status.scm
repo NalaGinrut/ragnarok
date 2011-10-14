@@ -77,6 +77,7 @@
 
 ;; Server Extended (only ragnarok)
 (define *Fork-Error* 1500)
+(define *CGI-Not-Allowed 1501)
 
 ;;----------Status Code End-------------
 
@@ -133,6 +134,7 @@
 	  "*Status-505* HTTP Version Not Supported!" #f))
     ;; 15xx
     (1500 ("Fork Error" "*Status-1500* Fork Error!" #f))
+    (1501 ("CGI-Not-Allowed" "*Status-1501* CGI Not Allowed" #f))
     ))
 
 (define http-get-reason-from-status

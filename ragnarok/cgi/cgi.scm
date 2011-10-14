@@ -183,3 +183,60 @@
 	(values #f *Forbidden* #f) ;; no excute perms
 	(regular-cgi-run cgi)
 	)))
+
+(define *cgi-env-vars-list* 17)
+(define (create-cgi-env-table)
+  (make-hash-table *cgi-envs-numbers*))
+
+(define (cgi:auth-type! cgi-env-table v)
+  (hash-set! cgi-env-table "AUTH_TYPE" v))
+
+(define (cgi:content-length! cgi-env-table v)
+  (hash-set! cgi-env-table "CONTENT_LENGTH" v))
+
+(define (cgi:content-type! cgi-env-table v)
+  (hash-set! cgi-env-table "CONTENT_TYPE" v))
+
+(define (cgi:gateway-interface! cgi-env-table v)
+  (hash-set! cgi-env-table "GATEWAY_INTERFACE" v))
+
+(define (cgi:path-info! cgi-env-table v)
+  (hash-set! cgi-env-table "PATH_INFO" v))
+
+(define (cgi:path-translated! cgi-env-table v)
+  (hash-set! cgi-env-table "PATH_TRANSLATED" v))
+
+(define (cgi:query-string! cgi-env-table v)
+  (hash-set! cgi-env-table "QUERY_STRING" v))
+
+(define (cgi:remote-addr! cgi-env-table v)
+  (hash-set! cgi-env-table "REMOTE_ADDR" v))
+
+(define (cgi:remote-host! cgi-env-table v)
+  (hash-set! cgi-env-table "REMOTE_HOST" v))
+
+(define (cgi:remote-ident! cgi-env-table v)
+  (hash-set! cgi-env-table "REMOTE_IDENT" v))
+
+(define (cgi:remote-user! cgi-env-table v)
+  (hash-set! cgi-env-table "REMOTE_USER" v))
+
+(define (cgi:request-method! cgi-env-table v)
+  (hash-set! cgi-env-table "REQUEST_METHOD" v))
+
+(define (cgi:script-name! cgi-env-table v)
+  (hash-set! cgi-env-table "SCRIPT_NAME" v))
+
+(define (cgi:server-name! cgi-env-table v)
+  (hash-set! cgi-env-table "SERVER_NAME" v))
+
+(define (cgi:server-port! cgi-env-table v)
+  (hash-set! cgi-env-table "SERVER_PORT" v))
+
+(define (cgi:server-protocol! cgi-env-table v)
+  (hash-set! cgi-env-table "SERVER_PROTOCOL" v))
+
+(define (cgi:server-software! cgi-env-table v)
+  (hash-set! cgi-env-table "SERVER_SOFTWARE" v))
+
+	   

@@ -20,16 +20,16 @@
   #:use-module (ragnarok log)
   #:use-module (ragnarok utils)
   #:use-module (ragnarok msg)
+  #:use-module (ragnarok info)
+  #:use-module (web uri)
+  #:use-module (web request)
   #:export (http-handler)
   )
 
-(define http-get-method-handler 
-  (@ (ragnarok protocol http method) http-get-method-handler)) 
+(define http-method-handler-get 
+  (@ (ragnarok protocol http method) http-method-handler-get)) 
 (define init-mime (@ (ragnarok protocol http mime) init-mime))
 (define *regular-headers* (@ (ragnarok protocol http header) *regular-headers*))
-(define request-method (@ (web request) request-method))
-(define request-headers (@ (web request) request-headers))
-(define read-request (@ (web request) read-request))
 (define fold (@ (srfi srfi-1) fold))
 ;; We use guile native http header parser here.
 ;; Maybe I'll write a new one later, or I should post a patch to guile
@@ -40,22 +40,50 @@
 ;; FIXME: I need to wrap handler template into a macro.
 ;;        I believe users don't want to write some meta info by themselves.
 (define http-handler 
-  (lambda (config logger conn-socket)
-    (let ([request (get-request logger conn-socket)])
+  (lambda (config logger client-connection subserver-info)
+    (let* ([conn-socket (car client-connection)]
+	   [conn-detail (cdr client-connection)]
+	   [request (get-request logger conn-socket)]
+	   [remote-host (car (request-host request))]
+	   [remote-addr (inet-ntoa 
+			 (sockaddr:addr (cdr conn-detail)))]
+	   [remote-ident #f] ;; doesn't support
+	   [remote-user (request-user-agent request)]
+	   [request-method (request-method request)]
+	   [query-string 
+	    (uri-query (request-uri request))]
+	   [auth-type (request-authorization request)]
+	   [content-length (request-content-length request)]
+	   [content-type (request-content-type request)]
+	   [target (uri-path (request-uri rq))]
+	   [remote-info 
+	    (make-remote-info remote-host remote-addr remote-ident
+			      remote-user request-method query-string
+			      auth-type content-length content-type
+			      target)]
+	   [server-info 
+	    (make-server-info conn-detail
+			      subserver-info
+			      request-info)]
+	   )
       (http-request-log logger request)
-      (http-response config logger request conn-socket)
+      (http-response config logger server-info conn-socket)
       )))
 
 (define http-response
-  (lambda (config logger request conn-socket)
-    (let* ([charset (get-config config 'charset)]
-	   [method (request-method request)]
-	   [r-handler (http-get-method-handler method)]
+  (lambda (config logger server-info conn-socket)
+    (let* ([client-details (cdr client-connection)]
+	   [charset (get-config config 'charset)]
+	   [connet-info (server-info:connect-info server-info)]
+	   [subserver-info (server-info:subserver-info server-info)]
+	   [remote-info (server-info:remote-info server-info)]
+	   [method (remote-info:request-method remote-info)]
+	   [r-handler (http-method-handler-get method)]
 	   )
 
       (call-with-values
 	  (lambda ()
-	    (r-handler config logger request))
+	    (r-handler config logger server-info))
 	    ;;(generate-http-response-content logger file))
 	(lambda (bv bv-len status type etag mtime)
 	  (let* ([reason (or (http-get-reason-from-status status)

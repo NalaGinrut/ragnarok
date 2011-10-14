@@ -43,6 +43,11 @@
 (define (type:string x) x)
 (define (type:symbol x) (string->symbol x))
 (define (type:integer x) (string->number x))
+(define (type:bool x) (string=? x "yes"))
+(define (type:list x)
+  (let ([l (string-split x #\,)])
+    (map string-trim-both l)
+    ))
 
 (define *valid-conf-list*
   `((root-path ,type:string)
@@ -51,6 +56,8 @@
     (max-request ,type:integer)
     (port ,type:integer)
     (charset ,type:string)
+    (cgi ,type:bool)
+    (script-ext ,type:list)
     ))
 
 (define verify-key-val

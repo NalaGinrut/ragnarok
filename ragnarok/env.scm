@@ -16,15 +16,13 @@
 (define-module (ragnarok env)
   #:use-module (ragnarok hook)
   #:use-module (ragnarok utils)
+  #:use-module (ragnarok version)
   #:use-module (oop goops)
   #:export (<env>
 	    env:handler-list env:reload-handler-list
 	    env:server-list
-	    *ragnarok-version*
 	    )
   )
-
-(define *ragnarok-version* "Ragnarok 0.0.1")
 
 (define-class <env> ()
 

@@ -14,12 +14,12 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok protocol http header)
+  #:use-module (ragnarok version)
   #:export (http-header
 	    *regular-headers*
 	    )
   )
 
-(define *ragnarok-version* (@ (ragnarok env) *ragnarok-version*))
 (define *OS-info* (vector-ref (uname) 0))
 (define *server-info*
   (format #f "~a (~a)" *ragnarok-version* *OS-info*))
