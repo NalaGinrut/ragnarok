@@ -53,19 +53,19 @@ SCM scm_mmr_check_file_perms(SCM target ,SCM perms)
   scm_dynwind_begin(0);
   errno = 0;
   
-  if(!stat(filename ,&sb))
+  if(stat(filename ,&sb))
     {
       goto end;
     }
 
   mode = sb.st_mode;
-  pa = PERMS_A | p;
-  pu = PERMS_U | p;
-  pr = PERMS_R | p;
+  pa = PERMS_A & p;
+  pu = PERMS_U & p;
+  pr = PERMS_R & p;
   
-  if((!(mode ^ pa)) ||
-     (!(mode ^ pu)) ||
-     (!(mode ^ pr)))
+  if((pa == (mode & pa)) ||
+     (pu == (mode & pu)) ||
+     (pr == (mode & pr)))
     {
       ret = SCM_BOOL_T;
     }

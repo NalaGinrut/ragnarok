@@ -50,7 +50,8 @@
     (call-with-values
 	(lambda ()
 	  (if (file-exists? filename)
-	      (let* ([remote-info (server-info:remote-info server-info)]
+	      (let* ([conn-socket (server-info:connect-socket server-info)]
+		     [remote-info (server-info:remote-info server-info)]
 		     [auth-type (remote-info:auth-type remote-info)]
 		     [content-length (remote-info:content-length remote-info)]
 		     [content-type (remote-info:content-type remote-info)]
@@ -94,10 +95,11 @@
 		(cgi:server-software! env-table server-software)
 
 		(ragnarok-regular-cgi-handler
-		 (make-cgi-record target env-table conn-socket)))
-	      );; end let*
-	  ;; file doesn't exist ,throw *Not-Found*
-	  (http-error-page-serv-handler logger *Not-Found*)
+		 (make-cgi-record filename env-table conn-socket))
+		);; end let*
+	      ;; file doesn't exist ,throw *Not-Found*
+	      (http-error-page-serv-handler logger *Not-Found* server-info)
+	      );; end if
 	  );; end lambda()
       (lambda (bv status fst)
 	(http-response-log logger status)

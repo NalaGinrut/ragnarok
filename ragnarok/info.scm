@@ -50,9 +50,11 @@
   )
 
 (define-record-type server-info
-  (make-server-info connect-info subserver-info remote-info)
+  (make-server-info connect-info connect-socket
+		    subserver-info remote-info)
   server-info?
   (connect-info server-info:connect-info)
+  (connect-socket server-info:connect-socket)
   (subserver-info server-info:subserver-info)
   (remote-info server-info:remote-info)
   )

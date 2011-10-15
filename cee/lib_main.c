@@ -30,7 +30,7 @@ SCM scm_mmr_create_this_path(SCM path ,SCM mode);
 void init_lib()
 {
   scm_c_define_gsubr("path-fix" ,1 ,0 ,0 ,scm_mmr_path_fix);
-  scm_c_define_gsubr("check-file-perm" ,2 ,0 ,0 ,scm_mmr_check_file_perms);
+  scm_c_define_gsubr("check-file-perms" ,2 ,0 ,0 ,scm_mmr_check_file_perms);
   scm_c_define_gsubr("scandir" ,1 ,1 ,0 ,scm_mmr_scandir);
   scm_c_define_gsubr("create-this-path" ,1 ,1 ,0 ,scm_mmr_create_this_path);
 }

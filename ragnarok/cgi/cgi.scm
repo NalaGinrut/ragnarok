@@ -23,6 +23,25 @@
 	    cgi-env-set!
 	    create-cgi
 	    regular-cgi-run
+	    ragnarok-regular-cgi-handler
+	    create-cgi-env-table
+	    cgi:auth-type! 
+	    cgi:content-length!
+	    cgi:content-type!
+	    cgi:gateway-interface!
+	    cgi:path-info! 
+	    cgi:path-translated!
+	    cgi:query-string!
+	    cgi:remote-addr! 
+	    cgi:remote-host! 
+	    cgi:remote-ident!
+	    cgi:remote-user! 
+	    cgi:request-method!
+	    cgi:script-name! 
+	    cgi:server-name! 
+	    cgi:server-port! 
+	    cgi:server-protocol!
+	    cgi:server-software!
 	    )
   )
 
@@ -143,7 +162,7 @@
 	(values #f *Fork-Error* #f))
        ((= i 0)
 	(let* ([target (cgi:target cgi)]
-	       [QUERY_STRING (cgi-env-get 'QUERY_STRING cgi)]
+	       [QUERY_STRING (cgi-env-get "QUERY_STRING" cgi)]
 	       [conn-socket (cgi:conn-socket cgi)]
 	       )
 	  (setvbuf w _IONBF) ;; set to block buffer
@@ -161,7 +180,7 @@
        
       ;; NOTE: parent must wait child terminate, 
       ;;       or get-bytevector-all will be blocked.
-      (waitpid i)
+      ;;(waitpid i)
       
       ;; NOTE: we must close input pipe ,or get-bytevector-all will be blocked.
       ;; I wonder if this is a bug.

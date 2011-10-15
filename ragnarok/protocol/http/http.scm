@@ -35,8 +35,6 @@
 ;; Maybe I'll write a new one later, or I should post a patch to guile
 ;; to support more MIME.
 
-  
-
 ;; FIXME: I need to wrap handler template into a macro.
 ;;        I believe users don't want to write some meta info by themselves.
 (define http-handler 
@@ -46,7 +44,7 @@
 	   [request (get-request logger conn-socket)]
 	   [remote-host (car (request-host request))]
 	   [remote-addr (inet-ntoa 
-			 (sockaddr:addr (cdr conn-detail)))]
+			 (sockaddr:addr conn-detail))]
 	   [remote-ident #f] ;; doesn't support
 	   [remote-user (request-user-agent request)]
 	   [request-method (request-method request)]
@@ -55,26 +53,25 @@
 	   [auth-type (request-authorization request)]
 	   [content-length (request-content-length request)]
 	   [content-type (request-content-type request)]
-	   [target (uri-path (request-uri rq))]
+	   [target (uri-path (request-uri request))]
 	   [remote-info 
 	    (make-remote-info remote-host remote-addr remote-ident
 			      remote-user request-method query-string
 			      auth-type content-length content-type
 			      target)]
 	   [server-info 
-	    (make-server-info conn-detail
-			      subserver-info
-			      request-info)]
+	    (make-server-info conn-detail conn-socket
+			      subserver-info remote-info)]
 	   )
       (http-request-log logger request)
-      (http-response config logger server-info conn-socket)
+      (http-response config logger server-info)
       )))
 
 (define http-response
-  (lambda (config logger server-info conn-socket)
-    (let* ([client-details (cdr client-connection)]
-	   [charset (get-config config 'charset)]
+  (lambda (config logger server-info)
+    (let* ([charset (get-config config 'charset)]
 	   [connet-info (server-info:connect-info server-info)]
+	   [conn-socket (server-info:connect-socket server-info)]
 	   [subserver-info (server-info:subserver-info server-info)]
 	   [remote-info (server-info:remote-info server-info)]
 	   [method (remote-info:request-method remote-info)]

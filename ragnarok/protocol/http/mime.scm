@@ -32,7 +32,8 @@
 
 (define get-type-from-mime
   (lambda (mime)
-    (hash-ref *mime-types-table* mime)))
+    (hash-ref *mime-types-table* mime)
+    ))
 
 ;; TODO: generate this table on the env init time, and save a copy in env.
 (define *mime-types-table* (make-hash-table 100))

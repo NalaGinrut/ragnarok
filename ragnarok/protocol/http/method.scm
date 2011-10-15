@@ -17,6 +17,7 @@
   #:use-module (ragnarok protocol http log)
   #:use-module (ragnarok protocol http status)
   #:use-module (ragnarok protocol http handler)
+  #:use-module (ragnarok info)
   #:use-module (ragnarok utils)
   #:export ( http-method-handler-get
 	     http-method-POST-handler
@@ -98,10 +99,10 @@
 	   [file (string-append root-path target)]
 	   [script-ext (get-config config 'script-ext)]
 	   [use-cgi (get-config config 'cgi)]
-	   [script-run-with-handler (run-with-handler? ext config)]
-	   
+	  	   
 	   ;; FIXME: I need this m-handler later
 	   [mime (get-request-mime file)]
+	   [script-run-with-handler (run-with-handler? mime config)]
 	   [m-handler (get-mime-handler mime)]
 	   )
 
@@ -110,26 +111,37 @@
       ;;       handler. But here, I just used a simple dispatch.
       (call-with-values
 	  (lambda ()
-	    (case mime
-	      ((*directory*) 
+	    (cond
+	      ((eqv? mime '*directory*) 
 	       (http-directory-serv-handler logger file server-info))
-	      ((*no-such-file*) 
+	      ((eqv? mime '*no-such-file*) 
 	       (http-error-page-serv-handler logger *Not-Found* server-info))
 	      ((not m-handler)
-	       (if script-run-with-handler
-		   (http-regular-cgi-handler logger file server-info)
+	       (if (and (not script-run-with-handler)
+			use-cgi)
+		   (call-with-values
+		       (lambda ()
+			 (http-regular-cgi-handler logger file server-info))
+		     (lambda (bv status fst)
+		       (if (not bv)
+			   (http-error-page-serv-handler logger
+							 status
+							 server-info)
+			   (values bv status fst))))
 		   (http-error-page-serv-handler logger 
 						 *CGI-Not-Allowed*
 						 server-info)))
 	      (else
 	       ;; deal with files
-	       (m-handler logger file)
+	       (m-handler logger file server-info)
 	       )))
 	(lambda (bv status fst)
 	  (let* ([type (get-type-from-mime mime)]
 		 [bv-len (if fst 
 			     (stat:size fst)
-			     (bytevector-length bv))] ;; do as dir handle.
+			     (if bv
+				 (bytevector-length bv)
+				 #f))] ;; do as dir handle.
 		 [mtime (if fst 
 			    (stat:mtime fst)
 			    (stat:mtime (stat file)))] ;; return dir's mtime

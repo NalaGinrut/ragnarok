@@ -21,6 +21,7 @@
   #:use-module (ragnarok handler)
   #:use-module (ragnarok log)
   #:use-module (ragnarok utils)
+  #:use-module (ragnarok info)
   #:use-module (ragnarok version)
   #:export (<server>
 	    server:socket server:config server:handler
@@ -102,6 +103,7 @@
     (let active-loop ()
       (if (not (port-closed? s))
 	  (let* ([client-connection (accept s)]
+		 [conn-socket (car client-connection)]
 		 [client-details (cdr client-connection)]
 		 )
 	    ;; FIXME: checkout the validity
