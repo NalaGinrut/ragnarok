@@ -16,14 +16,21 @@
 (define-module (ragnarok cgi cgi)
   #:use-module (ragnarok protocol http status)
   #:use-module (ragnarok utils)
+  #:use-module (ragnarok info)
   #:use-module (ragnarok version)
   #:use-module (srfi srfi-9)
   #:export (make-cgi-record
+	    file-stat:size
+	    record-real-bv-size
+	    cgi:env-table
+	    cgi:target
+	    cgi:conn-socket
 	    cgi-record?
 	    cgi-env-set!
 	    create-cgi
 	    regular-cgi-run
 	    ragnarok-regular-cgi-handler
+	    http-make-cgi-type
 	    create-cgi-env-table
 	    cgi:auth-type! 
 	    cgi:content-length!
@@ -54,6 +61,10 @@
     st
     ))
 
+(define *cgi-env-vars-numbers* 17)
+(define (create-cgi-env-table)
+  (make-hash-table *cgi-env-vars-numbers*))
+
 ;; WARN: DO NOT change the order of *cgi-env-vars-list*.
 (define *cgi-env-vars-list*
   '("AUTH_TYPE"
@@ -83,6 +94,52 @@
   (conn-socket cgi:conn-socket)
   )
 
+(define http-make-cgi-type
+  (lambda (fixed-target server-info)
+    (let* ([conn-socket (server-info:connect-socket server-info)]
+	   [remote-info (server-info:remote-info server-info)]
+	   [auth-type (remote-info:auth-type remote-info)]
+	   [content-length (remote-info:content-length remote-info)]
+	   [content-type (remote-info:content-type remote-info)]
+	   ;;[gateway-interface #f]
+	   ;;[path-info #f]
+	   ;;[path-translated #f]
+	   [query-string (remote-info:query-string remote-info)]
+	   [remote-addr (remote-info:remote-addr remote-info)]
+	   [remote-host (remote-info:remote-host remote-info)]
+	   ;;[remote-ident #f]
+	   [remote-user (remote-info:remote-user remote-info)]
+	   [request-method (remote-info:request-method remote-info)]
+	   [script-name (remote-info:target remote-info)]
+	   [subserver-info (server-info:subserver-info server-info)]
+	   [server-name (subserver-info:server-name subserver-info)]
+	   [server-port (subserver-info:server-port subserver-info)]
+	   [server-protocol 
+	    (subserver-info:server-protocol subserver-info)]
+	   [server-software 
+	    (subserver-info:server-software subserver-info)] 
+	   [env-table (create-cgi-env-table)]
+	   )
+      (create-cgi fixed-target conn-socket 
+		  #:QUERY_STRING query-string
+		  #:REQUEST_METHOD request-method
+		  #:AUTH_TYPE auth-type
+		  #:CONTENT_LENGTH content-length
+		  #:CONTENT_TYPE content-type
+		  ;;#:GATEWAY_INTERFACE gateway-interface
+		  ;;#:PATH_INFO path-info
+		  ;;#:PATH_TRANSLATED path-translated
+		  #:REMOTE_ADDR remote-addr
+		  #:REMOTE_HOST remote-host
+		  ;;#:REMOTE_IDENT remote-ident
+		  #:REMOTE_USER remote-user
+		  #:SCRIPT_NAME script-name
+		  #:SERVER_NAME server-name
+		  #:SERVER_PORT server-port
+		  #:SERVER_PROTOCOL server-protocol
+		  #:SERVER_SOFTWARE server-software)
+      )))
+
 (define create-cgi
   (lambda* 
    (target conn-socket 
@@ -92,7 +149,7 @@
 	   (AUTH_TYPE "Basic")
 	   (CONTENT_LENGTH "")
 	   (CONTENT_TYPE "")
-	   (GATEWAY_INTERFACE "CGI")
+	   (GATEWAY_INTERFACE "CGI/1.1")
 	   (PATH_INFO "")
 	   (PATH_TRANSLATED "")
 	   (REMOTE_ADDR "")
@@ -106,7 +163,7 @@
 	   (SERVER_SOFTWARE *ragnarok-version*)
 	   )
   ;; WARN: DO NOT change this order.
-  (let* ([in `(,AUTH_TYPE
+  (let* ([vl `(,AUTH_TYPE
 	       ,CONTENT_LENGTH
 	       ,CONTENT_TYPE
 	       ,GATEWAY_INTERFACE
@@ -123,13 +180,13 @@
 	       ,SERVER_PORT
 	       ,SERVER_PROTOCOL
 	       ,SERVER_SOFTWARE)]
-	 [env-table (make-hash-table 17)]
+	 [env-table (make-hash-table *cgi-env-vars-numbers*)]
 	 )
      
-    (for-each (lambda (e i)
-		(hash-set! env-table e i))
+    (for-each (lambda (k v)
+		(hash-set! env-table k v))
 	      *cgi-env-vars-list*
-	      in)
+	      vl)
     
     (make-cgi-record target
 		     env-table
@@ -180,7 +237,7 @@
        
       ;; NOTE: parent must wait child terminate, 
       ;;       or get-bytevector-all will be blocked.
-      ;;(waitpid i)
+      (ragnarok-waitpid i)
       
       ;; NOTE: we must close input pipe ,or get-bytevector-all will be blocked.
       ;; I wonder if this is a bug.
@@ -202,10 +259,6 @@
 	(values #f *Forbidden* #f) ;; no excute perms
 	(regular-cgi-run cgi)
 	)))
-
-(define *cgi-env-vars-list* 17)
-(define (create-cgi-env-table)
-  (make-hash-table *cgi-envs-numbers*))
 
 (define (cgi:auth-type! cgi-env-table v)
   (hash-set! cgi-env-table "AUTH_TYPE" v))

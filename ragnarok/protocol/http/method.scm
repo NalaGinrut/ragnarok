@@ -17,6 +17,7 @@
   #:use-module (ragnarok protocol http log)
   #:use-module (ragnarok protocol http status)
   #:use-module (ragnarok protocol http handler)
+  #:use-module (ragnarok protocol http error)
   #:use-module (ragnarok info)
   #:use-module (ragnarok utils)
   #:export ( http-method-handler-get
@@ -152,15 +153,15 @@
       )))
 
 (define *method-handler-list*
-  `((GET ,http-method-GET-handler)
-    (POST ,http-method-POST-handler)
-    (DELETE ,http-method-DELETE-handler)
-    (HEAD ,http-method-HEAD-handler)
-    (PUT ,http-method-PUT-handler)
-    (CONNECT ,http-method-CONNECT-handler)
-    (OPTIONS ,http-method-OPTIONS-handler)
-    (TRACE ,http-method-TRACE-handler)
-    (PATCH ,http-method-PATCH-handler)
+  `(("GET" ,http-method-GET-handler)
+    ("POST" ,http-method-POST-handler)
+    ("DELETE" ,http-method-DELETE-handler)
+    ("HEAD" ,http-method-HEAD-handler)
+    ("PUT" ,http-method-PUT-handler)
+    ("CONNECT" ,http-method-CONNECT-handler)
+    ("OPTIONS" ,http-method-OPTIONS-handler)
+    ("TRACE" ,http-method-TRACE-handler)
+    ("PATCH" ,http-method-PATCH-handler)
     ))
 
 (define generate-etag

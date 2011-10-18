@@ -15,7 +15,6 @@
 
 (define-module (ragnarok utils))
 
-
 (module-export-all! (current-module))
 
 (dynamic-call "init_lib" (dynamic-link "libragnarok"))
@@ -30,6 +29,8 @@
 (define string->utf8 (@ (rnrs bytevectors) string->utf8))
 
 (define get-bytevector-all (@ (rnrs io ports) get-bytevector-all))
+
+(define get-string-all (@ (rnrs io ports) get-string-all))
 
 (define bytevector-length (@ (rnrs bytevectors) bytevector-length))
 

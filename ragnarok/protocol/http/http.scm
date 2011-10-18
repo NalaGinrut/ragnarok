@@ -17,6 +17,7 @@
   #:use-module (ragnarok protocol http status)
   #:use-module (ragnarok protocol http log)
   #:use-module (ragnarok protocol http response)
+  #:use-module (ragnarok protocol http error)
   #:use-module (ragnarok log)
   #:use-module (ragnarok utils)
   #:use-module (ragnarok msg)
@@ -47,7 +48,8 @@
 			 (sockaddr:addr conn-detail))]
 	   [remote-ident #f] ;; doesn't support
 	   [remote-user (request-user-agent request)]
-	   [request-method (request-method request)]
+	   [request-method (symbol->string
+			    (request-method request))]
 	   [query-string 
 	    (uri-query (request-uri request))]
 	   [auth-type (request-authorization request)]
@@ -81,7 +83,6 @@
       (call-with-values
 	  (lambda ()
 	    (r-handler config logger server-info))
-	    ;;(generate-http-response-content logger file))
 	(lambda (bv bv-len status type etag mtime)
 	  (let* ([reason (or (http-get-reason-from-status status)
 			     "Invalid Status")]

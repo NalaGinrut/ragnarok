@@ -76,4 +76,7 @@
 (video/x-ms-asf (asf asx       ))
 (video/x-matroska (mpv mkv       ))
 (x-world/x-vrml (vrm vrml wrl      ))
+
+;; ragnarok mime extension
+(application/x-guile-tpl (gl scm))
 )

@@ -21,6 +21,7 @@
   #:export (<logger>
 	    logger:open-proper-port
 	    logger:printer
+	    logger:sync
 	    logger:name logger:path
 	    logger:port logger:filename)
   )
@@ -53,7 +54,12 @@
   '((console-port (current-output-port))
     (err-port (current-error-port))
     ))
-	 
+	
+(define-method (logger:sync (self <logger>))
+  (force-output 
+   (logger:port self)
+   ))
+
 (define-method (logger:printer (self <logger>) msg)
   (let ([port (logger:port self)])
 	(if port
@@ -91,7 +97,7 @@
       (format port "~a:~% [~a] ~a~%" time type info)
       
       ;; FIXME: Could this sync-process drag down server's speed?
-      (force-output port)
+      ;;(force-output port)
       )))
 
 (define print-to-all-ports

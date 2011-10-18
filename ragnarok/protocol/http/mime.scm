@@ -69,7 +69,7 @@
 ;; TODO: MIME handler should be dynamically registered.
 (define *mime-handler-list*
   `((html ,(@@ (ragnarok protocol http handler) http-static-page-serv-handler))
-    ;(gl ,(@ (ragnarok cgi guile) http-guile-serv-handler))
+    (gl ,(@ (ragnarok cgi guile) cgi-guile-serv-handler))
     ))
 
 

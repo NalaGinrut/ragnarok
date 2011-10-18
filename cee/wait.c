@@ -21,18 +21,36 @@
 #endif
 
 #include <libguile.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
-SCM scm_mmr_path_fix(SCM target);
-SCM scm_mmr_scandir(SCM dir ,SCM filter);
-SCM scm_mmr_check_file_perms(SCM target ,SCM perms);
-SCM scm_mmr_create_this_path(SCM path ,SCM mode);
-SCM scm_mmr_waitpid(SCM pid ,SCM options);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void init_lib()
+SCM scm_mmr_waitpid(SCM pid ,SCM options)
+#define FUNC_NAME "ragnarok-waitpid"
 {
-  scm_c_define_gsubr("path-fix" ,1 ,0 ,0 ,scm_mmr_path_fix);
-  scm_c_define_gsubr("check-file-perms" ,2 ,0 ,0 ,scm_mmr_check_file_perms);
-  scm_c_define_gsubr("scandir" ,1 ,1 ,0 ,scm_mmr_scandir);
-  scm_c_define_gsubr("create-this-path" ,1 ,1 ,0 ,scm_mmr_create_this_path);
-  scm_c_define_gsubr("ragnarok-waitpid" ,1 ,1 ,0 ,scm_mmr_waitpid);
+  int i;
+  int status;
+  int ioptions;
+  if (SCM_UNBNDP (options))
+    ioptions = 0;
+  else
+    {
+      /* Flags are interned in scm_init_posix.  */
+      ioptions = scm_to_int (options);
+    }
+
+  SCM_SYSCALL (i = waitpid (scm_to_int (pid), &status, ioptions));
+
+  if (i == -1)
+    SCM_BOOL_F;
+
+  return scm_cons (scm_from_int (i), scm_from_int (status));
 }
+#undef FUNC_NAME
+
+#ifdef __cplusplus
+}
+#endif

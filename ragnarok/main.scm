@@ -167,6 +167,10 @@ God bless hacking."
       (setsid)
       (chdir *ragnarok-running-dir*)
 
+      ;; delete old err log file ,or it will mess up with old-old err log
+      (if (file-exists? *ragnarok-err-log-file*)
+	  (delete-file *ragnarok-err-log-file*))
+
       (let* ([i (open "/dev/null" O_RDWR)]
 	     [e (open *ragnarok-err-log-file* (logior O_CREAT O_RDWR))] 
 	     [lfp (open *ragnarok-lock-file* 

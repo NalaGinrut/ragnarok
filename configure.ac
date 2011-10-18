@@ -31,8 +31,9 @@ AC_CHECK_HEADERS([fcntl.h malloc.h stdlib.h string.h unistd.h])
 AC_C_INLINE
 
 # Checks for library functions.
+AC_FUNC_MALLOC
 AC_FUNC_FORK
-AC_CHECK_FUNCS([memchr])
+AC_CHECK_FUNCS([memchr mkdir])
 
 # Check for Guile
 PKG_CHECK_MODULES([GUILE], [guile-2.0])
