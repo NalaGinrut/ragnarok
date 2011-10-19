@@ -157,7 +157,7 @@ God bless hacking."
        (need-version? (show-version)))
       
       ;; daemonize
-      (let ([i (primitive-fork)])
+      (let ([i (ragnarok-fork)])
 	(cond
 	 ((> i 0) (exit)) ;; exit parent
 	 ((< i 0) (error "Ragnarok: fork error!")))

@@ -21,22 +21,26 @@
 #endif
 
 #include <libguile.h>
+#include <unistd.h>
 
-SCM scm_mmr_path_fix(SCM target);
-SCM scm_mmr_scandir(SCM dir ,SCM filter);
-SCM scm_mmr_check_file_perms(SCM target ,SCM perms);
-SCM scm_mmr_create_this_path(SCM path ,SCM mode);
-SCM scm_mmr_waitpid(SCM pid ,SCM options);
-SCM scm_mmr_fork();
-SCM scm_mmr_gcrypt_mda(SCM ori_str ,SCM algo);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void init_lib()
+  /* I wrap this fork becaust I don't want the error throwing.
+   * Though I can catch the error and handle it. But there're something
+   * wrong with the logger mechanism.
+   */
+SCM scm_mmr_fork()
+#define FUNC_NAME "ragnarok-fork"
 {
-  scm_c_define_gsubr("path-fix" ,1 ,0 ,0 ,scm_mmr_path_fix);
-  scm_c_define_gsubr("check-file-perms" ,2 ,0 ,0 ,scm_mmr_check_file_perms);
-  scm_c_define_gsubr("scandir" ,1 ,1 ,0 ,scm_mmr_scandir);
-  scm_c_define_gsubr("create-this-path" ,1 ,1 ,0 ,scm_mmr_create_this_path);
-  scm_c_define_gsubr("ragnarok-waitpid" ,1 ,1 ,0 ,scm_mmr_waitpid);
-  scm_c_define_gsubr("ragnarok-fork" ,0 ,0 ,0 ,scm_mmr_fork);
-  scm_c_define_gsubr("gcrypt:mda", 2, 0, 0, scm_mmr_gcrypt_mda);
+  int pid;
+  pid = fork ();
+
+  return scm_from_int (pid);
 }
+#undef FUNC_NAME
+
+#ifdef __cplusplus
+}
+#endif

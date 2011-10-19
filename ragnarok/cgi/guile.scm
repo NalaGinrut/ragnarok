@@ -106,7 +106,7 @@
 	  (lambda args
 	    (let ([script-in (apply string-copy `(,in-buf ,@args))])
 	      (format out-buf "~a" 
-		      (string-append " (format guile-cgi-render-outport \"~a\" "
+		      (string-append " (format #t \"~a\" "
 				     script-in
 				     " ) "
 				     )
@@ -122,7 +122,7 @@
 	  (lambda args
 	    (let ([html-str (apply string-copy `(,in-buf ,@args))])
 	      (format out-buf "~a"
-		      (string-append " (format guile-cgi-render-outport \"~a\" " 
+		      (string-append " (format #t \"~a\" " 
 				     (object->string html-str)
 				     " ) "
 				     )
@@ -168,10 +168,10 @@
 	 (hash-ref env-table key))
 	))
 
+    ;;(redirect-port guile-cgi-render-outport (current-output-port))
     ;; run the real cgi
-    (if guile-cgi-render-outport
-	(eval-string render-result (current-module)))
-    (close guile-cgi-render-outport)
+    (eval-string render-result (current-module))
+    ;;(close guile-cgi-render-outport)
 
     (let* ([bv (get-bytevector-all r)]
 	   [bv-len (bytevector-length bv)]

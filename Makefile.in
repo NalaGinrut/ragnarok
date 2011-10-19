@@ -60,6 +60,7 @@ install: $(ALL_TARGETS)
 	cp -frdp $(MOD) $(MOD_PATH)
 	$(INSTALL) -m 755 -d $(MOD_TARGET_PATH)
 	cp -frdp $(MOD_OBJ)/* $(MOD_TARGET_PATH)
+	chmod a+w $(MOD_TARGET_PATH)/* -R
 	$(INSTALL) -m 755 $(OBJ)/bin/* $(PREFIX)/bin
 	cp -frdp $(RAGNAROK_ETC) /etc
 

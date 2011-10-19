@@ -35,7 +35,7 @@
 
 (define get-mime-handler (@ (ragnarok protocol http mime) get-mime-handler))
 (define get-type-from-mime (@ (ragnarok protocol http mime) get-type-from-mime))
-(define gcrypt:sha1 (@ (gcrypt mda) gcrypt:sha1))
+(define gcrypt:sha1 (@ (ragnarok gcrypt mda) gcrypt:sha1))
 (define uri-path (@ (web uri) uri-path))
 (define request-uri (@ (web request) request-uri))
 
