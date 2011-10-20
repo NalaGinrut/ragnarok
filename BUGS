@@ -1,0 +1,4 @@
+* guile CGI tpl access will cause crash after many refreshing
+
+* POST method: redirect conn-socket to current-input-port and read ,will cause crash
+  because it countered <eof>.

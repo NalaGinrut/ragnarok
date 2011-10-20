@@ -86,18 +86,20 @@
 	(lambda (bv bv-len status type etag mtime)
 	  (let* ([reason (or (http-get-reason-from-status status)
 			     "Invalid Status")]
-		 [mt (strftime "%c" (gmtime mtime))] ;; return to client as GMT.
+		 [mt (->global-time mtime)] ;;return to client as GMT.
+		 [now-time (get-global-current-time)]
+		 [return-type "text/html"]
 		 [response (build-response
 			    #:version 1.1
 			    #:code status
 			    #:reason reason
 			    #:headers `(,@*regular-headers*
+					(date . ,now-time)
 					(last-modified . ,mt)
-					(etag . ,etag)
-					
+					(eTag . ,etag)
 					;; NOTE: keep these two lines last!
 					(content-length . ,bv-len)
-					(content-type . ,type)
+					(content-type . ,return-type)
 					)
 			    #:charset charset
 			    )]

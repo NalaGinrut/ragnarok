@@ -1,0 +1,9 @@
+#! /bin/bash
+
+if [ $1 -z ];
+then
+	echo ragnarok-show-sub-log [subserver-name];
+	exit 1;
+else
+	cat /var/log/ragnarok/ragnarok.$1.log;
+fi

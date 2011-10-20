@@ -34,20 +34,20 @@ SCM scm_mmr_waitpid(SCM pid ,SCM options)
   int i;
   int status;
   int ioptions;
-  if (SCM_UNBNDP (options))
+  if (SCM_UNBNDP(options))
     ioptions = 0;
   else
     {
       /* Flags are interned in scm_init_posix.  */
-      ioptions = scm_to_int (options);
+      ioptions = scm_to_int(options);
     }
 
-  SCM_SYSCALL (i = waitpid (scm_to_int (pid), &status, ioptions));
+  i = waitpid(scm_to_int(pid), &status, ioptions);
 
   if (i == -1)
     SCM_BOOL_F;
 
-  return scm_cons (scm_from_int (i), scm_from_int (status));
+  return scm_cons (scm_from_int(i), scm_from_int(status));
 }
 #undef FUNC_NAME
 

@@ -65,7 +65,7 @@
 	   [headers (gen-header-str (response:headers response))]
 	   [charset (response:charset response)]
 	   )
-      (format port "HTTP/~a ~a ~a ~a;charset=~a~%~%"
+      (format port "HTTP/~a ~a ~a ~a; charset=~a~%~%"
 	      version code reason headers charset)
       )))
        

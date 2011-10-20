@@ -45,7 +45,7 @@ GUILE_SITE_DIR
 LT_INIT([dlopen disable-fast-install disable-static win32-dll])
 
 RAGNAROK_WITH_LIBGCRYPT=0
-AC_ARG_ENABLE([libgcrypt],
+AC_ARG_ENABLE([enable-libgcrypt],
   [AS_HELP_STRING([--enable-libgcrypt],
 	          [Build with libgcrypt enabled (using ETAG must enable this)])],
   if test "$enable_libgcrypt" = y || test "$enable_libgcrypt" = yes; then

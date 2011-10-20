@@ -212,7 +212,7 @@
     (let* ([p-buf (pipe)]
 	   [r (car p-buf)]
 	   [w (cdr p-buf)]
-	   [i (primitive-fork)]
+	   [i (ragnarok-fork)]
 	   )
       (cond 
        ((< i 0)

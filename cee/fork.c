@@ -35,7 +35,7 @@ SCM scm_mmr_fork()
 #define FUNC_NAME "ragnarok-fork"
 {
   int pid;
-  pid = fork ();
+  pid = fork();
 
   return scm_from_int (pid);
 }

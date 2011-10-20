@@ -17,11 +17,11 @@
   #:use-module (ragnarok protocol http status)
   #:use-module (ragnarok protocol http log)
   #:use-module (ragnarok cgi cgi)
+  #:use-module (ragnarok cgi guile-fluid)
   #:use-module (ragnarok utils)
-  #:export (cgi-guile-serv-handler)
+  #:export (cgi-guile-serv-handler
+	    )
   )
-
-(define read-line (@ (ice-9 rdelim) read-line))
 
 (define start-sign "<% ")
 (define startd-sign "<%= ")
@@ -106,10 +106,11 @@
 	  (lambda args
 	    (let ([script-in (apply string-copy `(,in-buf ,@args))])
 	      (format out-buf "~a" 
-		      (string-append " (format #t \"~a\" "
-				     script-in
-				     " ) "
-				     )
+		      (string-append 
+		       " (format *ragnarok-guile-cgi-outport* \"~a\" "
+		       script-in
+		       " ) "
+		       )
 		      )))]
 	 ;; handle script part
 	 [write-script-to-out-buf
@@ -122,10 +123,11 @@
 	  (lambda args
 	    (let ([html-str (apply string-copy `(,in-buf ,@args))])
 	      (format out-buf "~a"
-		      (string-append " (format #t \"~a\" " 
-				     (object->string html-str)
-				     " ) "
-				     )
+		      (string-append 
+		       " (format *ragnarok-guile-cgi-outport* \"~a\" " 
+		       (object->string html-str)
+		       " ) "
+		       )
 		      )))]
 	 );; end let-rec*
 	(tpl-parser 0)
@@ -133,55 +135,89 @@
        );; end call-with-output-string
      )))
 
+(define-syntax ->
+  (syntax-rules (@query @post @global)
+    ((_ @query target)
+     (string->symbol (string-append "query-table-" target)))
+    ((_ @post target)
+     (string->symbol (string->symbol "post-table-" target)))
+    ((_ @global target)
+     (string->symbol (string->symbol "global-table-" target)))
+    ))
+
+(define guile-cgi-pre-head
+  "(use-modules (ragnarok cgi guile-fluid))
+   (let* ([*ragnarok-guile-cgi-outport* 
+           (fluid-ref guile-cgi-outport-fluid)]
+          [*ragnarok-guile-cgi-query-table* 
+           (fluid-ref query-table-fluid)]
+          [*ragnarok-guile-cgi-post-table*
+           (fluid-ref post-table-fluid)]
+          [*ragnarok-guile-cgi-env-table*
+           (fluid-ref env-table-fluid)]
+          )
+         (define-syntax $env
+          (syntax-rules (@query @post @global
+               @query! @post! @global!)
+          ((_ @query key)
+           (hash-ref *ragnarok-guile-cgi-query-table* key))
+          ((_ @query! key val)
+           (hash-set! *ragnarok-guile-cgi-query-table* key val))
+          ((_ @post! key val)
+           (hash-set! *ragnarok-guile-cgi-post-table* key val))
+          ((_ @post key)
+           (hash-ref *ragnarok-guile-cgi-post-table* key))
+          ((_ @global! key val)
+           (hash-set! *ragnarok-guile-cgi-env-table* key val))
+          ((_ @global key)
+           (hash-ref *ragnarok-guile-cgi-env-table* key))
+          ))"
+  )
+
 (define run-guile-cgi
   (lambda (cgi)
+    (if (not (cgi-record? cgi))
+	(error regular-cgi-run "Not cgi-record-type!" cgi))
     (let* ([env-table (cgi:env-table cgi)]
 	   [conn-socket (cgi:conn-socket cgi)]
 	   [target (cgi:target cgi)]
 	   [method (hash-ref env-table "REQUEST_METHOD")]
 	   [query-table 
 	    (create-query-table (hash-ref env-table "QUERY-STRING"))]
-	   ;[post-table 
+	   [post-table #f] 
 	    ;(create-query-table (read-line conn-socket))]
 	   [cgi-content (get-string-all
 			 (open-input-file target))]
 	   [render-result (guile-cgi-render cgi-content)]
 	   [pp (pipe)]
 	   [r (car pp)]
-	   [guile-cgi-render-outport (cdr pp)]
+	   [w (cdr pp)]
 	   )
       
-    (define-syntax $env
-      (syntax-rules (@query @post @global
-			    @query! @post! @global!)
-	((_ @query key)
-	 (hash-ref query-table key))
-	((_ @query! key val)
-	 (hash-set! query-table key val))
-	((_ @post! key val)
-	 (hash-set! post-table key val))
-	((_ @post key)
-	 (hash-ref post-table key))
-	((_ @global! key val)
-	 (hash-set! env-table key val))
-	((_ @global key)
-	 (hash-ref env-table key))
-	))
+      (with-fluids
+       ([guile-cgi-outport-fluid w]
+	[query-table-fluid query-table]
+	[post-table-fluid post-table]
+	[env-table-fluid env-table]
+	)
+       (eval-string (string-append 
+		     guile-cgi-pre-head
+		     render-result
+		     " ) ")
+		    )
+       );; end with-fluids
 
-    ;;(redirect-port guile-cgi-render-outport (current-output-port))
-    ;; run the real cgi
-    (eval-string render-result (current-module))
-    ;;(close guile-cgi-render-outport)
-
-    (let* ([bv (get-bytevector-all r)]
-	   [bv-len (bytevector-length bv)]
-	   [fst (stat target)]
-	   )
-      (values bv
-	      *OK*
-	      (record-real-bv-size fst bv-len))
-      );; end let*
-    )))
+      (close w)
+      
+      (let* ([bv (get-bytevector-all r)]
+	     [bv-len (bytevector-length bv)]
+	     [fst (stat target)]
+	     )
+	(values bv
+		*OK*
+		(record-real-bv-size fst bv-len))
+	);; end let*
+      )))
 
 (define cgi-guile-serv-handler
   (lambda (logger filename server-info)

@@ -41,8 +41,18 @@
     (close (open file O_CREAT))
     ))
     
+(define ->global-time
+  (lambda (t)
+    (strftime "%a, %d %b %Y %T %Z" (gmtime t))
+    ))
+
+(define ->local-time
+  (lambda (t)
+    (strftime "%a, %d %b %Y %T %Z" (localtime t))
+    ))
+
 (define (get-global-current-time)
-  (strftime "%c" (gmtime (current-time ))))
+  (strftime "%a, %d %b %Y %T %Z" (gmtime (current-time ))))
 
 (define search-from-list
   (lambda (l e)

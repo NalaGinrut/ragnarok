@@ -13,3 +13,8 @@
 * Filter the target path, it should not appear '\n'
 
 * Use catch/throw to handle the error
+
+** deal with concurrent request
+
+* deal with file uploading
+ 
