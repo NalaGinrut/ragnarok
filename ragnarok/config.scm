@@ -15,29 +15,33 @@
 
 (define-module (ragnarok config)
   #:use-module (ice-9 rdelim)
+  #:use-module (ice-9 regex)
   #:use-module (ragnarok utils)
   #:export (gen-conf-table
 	    print-conf-table
-	    *conf-table*)
+	    *conf-table*
+	    get-sub-server-conf-table
+	    get-sub-server-name-list)
   )
 
 ;; config will generate a global config hash table
 ;; so we need to start each server following config table
 ;; TODO: each environment should match one config file.
-;;       And each env contains many servers,
-;;       but we haven't implement environment yet. 
-(define *max-conf-len* 32)
+;;       And each env contains many servers.
+(define *start-sign* "+[")
+(define *stop-sign* "-[")
 (define *split-sign* #\:)
-(define *conf-table* (make-hash-table *max-conf-len*))
+(define *conf-table* (make-hash-table))
 (define *conf-path* "/etc/ragnarok")
 (define *core-conf-file* "server.conf")
+(define *ragnarok-conf-file*
+  (string-append *conf-path* "/" *core-conf-file*))
 
 (define print-conf-table 
   (lambda (table)
     (hash-for-each
      (lambda (x y) (format #t "~a : ~a~%" x y))
      table)))
-
 
 ;; one may add new conf item to this list for verifying.
 (define (type:string x) x)
@@ -54,7 +58,7 @@
     (protocol ,type:symbol)
     (status-show ,type:symbol)
     (max-request ,type:integer)
-    (port ,type:integer)
+    (listen ,type:integer)
     (charset ,type:string)
     (cgi ,type:bool)
     (script-ext ,type:list)
@@ -67,28 +71,33 @@
 	  (error verify-key-val "invalid key!" key))
       )))
 	   
-(define verify-then-add-key-val
-  (lambda (key val)
-    (let ([vv (verify-key-val key val)])
-      (hash-set! *conf-table* key vv)
-      )))
-
 (define gen-conf-table
   (lambda ()
     (let ([conf-list (get-config-list)])
-      (for-each add-to-conf-table conf-list)
+      (for-each add-each-sub-server-conf-to-table conf-list)
       *conf-table*
       )))
 
-(define add-to-conf-table
-  (lambda (kv-pair)
-    (call-with-values
-	(lambda ()
-	  (values (car kv-pair)
-		  (cdr kv-pair)))
-      verify-then-add-key-val)))
+(define add-each-sub-server-conf-to-table
+  (lambda (sc-pair)
+    (let* ([sub-server-conf-table (make-hash-table)]
+	   [sname (car sc-pair)]
+	   [sconf (cdr sc-pair)]
+	   )
+      (for-each 
+       (lambda (kv-pair) 
+	 (let* ([k (car kv-pair)]
+		[v (cdr kv-pair)]
+		[vv (verify-key-val k v)]
+		)
+	   (hash-set! sub-server-conf-table k vv)
+	   )) ;; end lambda
+       sconf) ;; end for-each
       
-    
+      ;; add sub-server conf table to table
+      (hash-set! *conf-table* sname sub-server-conf-table)
+      )))
+
 (define verify-conf-list
   (lambda (conf-list)
     (for-each verify-key-val conf-list))) 
@@ -98,29 +107,85 @@
     (let ([f (string-append path "/" file)])
       (open-input-file f))))
 
+;; NOTE: subserver name only contains upper/lower case char and numbers
+(define *subserver-name-pattern* "\\+\\[([A-Za-z0-9 ]+)\\]")
+
+(define (get-sub-server-name-list)
+  (hash-map->list 
+   (lambda (k v)
+     k)
+   *conf-table*)
+  )
+      
+(define get-sub-server-conf-table
+  (lambda (sname)
+    (hash-ref *conf-table* sname)
+    ))
+
+(define get-sub-server-name
+  (lambda (conf-line)
+    (let* ([match (string-match *subserver-name-pattern*
+				conf-line)]
+	   [sname (and match (match:substring match 1))]
+	   )
+      (and sname
+	   (string-trim-both sname))
+      )))
+
+(define fix-sconf-str
+  (lambda (str)
+    (let ([i (string-contains "{" str)])
+      (if i
+	  (string-copy str (1+ i))
+	  str
+	  ))))
+
+(define get-sub-server-conf
+  (lambda (fp)
+    (let* ([sconf-str-0 (read-delimited "}" fp)]
+	   [sconf-str (fix-sconf-str sconf-str-0)]
+	   )
+      (call-with-input-string 
+       sconf-str
+       (lambda (port)
+	 (let read-loop ([scl '()])
+	   (let ([conf-line (read-line port)])
+	     (cond
+	      ((eof-object? conf-line)
+	       scl)
+	      ((or (string-null? conf-line)
+		   (char=? (string-ref conf-line 0) #\#)) ;; comment
+	       (read-loop scl))
+	      (else
+	       (let* ([kvl (string-split conf-line *split-sign*)]
+		      [key 
+		       (string->symbol 
+			(string-trim-both (car kvl)))]
+		      [val (string-trim-both (cadr kvl))]
+		      )
+		 (read-loop (cons (cons key val) scl))
+		 ))) ;; end cond
+	     )))) ;; end call-with-input-string
+      )))
+	   
 (define get-config-list
   (lambda ()
-    (let ([conf-port (get-conf-from-path
-		       *conf-path*
-		       *core-conf-file*)]
-	  )
+    (let ([conf-port (open-input-file *ragnarok-conf-file*)])
       (let read-loop ([cl '()])
 	(let ([conf-line (read-line conf-port)])
 	  (cond
 	   ((eof-object? conf-line)
 	    cl)  
 	   ((or (string-null? conf-line)
-		(char=? (string-ref conf-line 0) #\#))
+		(char=? (string-ref conf-line 0) #\#) ;; comment
+		(string-contains conf-line *stop-sign*)) ;; sub-server who won't start
 	    (read-loop cl))
-	   (else
-	    (let* ([kvl (string-split conf-line *split-sign*)]
-		   [key 
-		    (string->symbol 
-		     (string-trim-both (car kvl)))]
-		   [val (string-trim-both (cadr kvl))]
+	   ((string-contains conf-line *start-sign*)
+	    (let* ([sname (get-sub-server-name conf-line)]
+		   [sconf (get-sub-server-conf conf-port)]
 		   )
-	      (read-loop (cons (cons key val) cl))
+	      (read-loop (cons (cons sname sconf) cl))
 	      ))
-	   ))))))
-      
+	   );; end cond
+	  )))))
 

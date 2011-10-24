@@ -14,6 +14,7 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok env)
+  #:use-module (ragnarok config)
   #:use-module (ragnarok hook)
   #:use-module (ragnarok utils)
   #:use-module (ragnarok version)
@@ -37,6 +38,24 @@
 (define-method (initialize (self <env>) . initargs)
   (next-method)
   (hook-list-init)
+  
+  ;; read config and generate the config table for each active sub-server
+  (gen-conf-table)
+  
+  ;; show the active subserver information
+  (show-subserver-info)
   )
+
+(define (show-subserver-info)
+  (let* ([snl (get-sub-server-name-list)]
+	 [cnt (length snl)]
+	 )
+    (format #t "Find ~a sub-servers from you machine:~%" cnt)
+    (for-each (lambda (sname)
+		(format #t "[~a] " sname)
+		)
+	      snl)
+    (newline)
+    ))
 
   

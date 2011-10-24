@@ -27,13 +27,15 @@
 	    server:socket server:config server:handler
 	    server:logger server:run server:show-config
 	    server:get-config server:down
+	    server:print-start-info
 	    )
   )
 
 (define-class <server> (<env>)
   ;; FIXME: support server name later. 
   ;;        And logger name should accord to server name.
-  (name #:init-value "http0" #:accessor server:name)
+  (name #:init-value "http0" #:accessor server:name 
+	#:init-keyword #:name)
   (listen-socket #:accessor server:listen-socket)
   (config #:accessor server:config)
   (handler #:accessor server:handler)
@@ -43,12 +45,12 @@
 (define-method (initialize (self <server>) initargs)
   (next-method) ;; call regular routine
   (let* ([handler-list (load-handler)]
-	 [config (gen-conf-table)]
+	 [name (server:name self)]
+	 [config (get-sub-server-conf-table name)]
 	 [status-show (hash-ref config 'status-show)]
 	 [logger (make <logger> `(status-show ,status-show) '())]
 	 [protocol (hash-ref config 'protocol)]
 	 [handler (get-handler handler-list protocol)]
-	 [name (server:name self)]
 	 )
     (set! (server:config self) config)
     (set! (server:logger self) logger)
@@ -72,6 +74,16 @@
     ;;       And all of them covered by one hash table.
     (hash-ref conf var)))
 
+(define-method (server:print-start-info (self <server>))
+  (let* ([sname (server:name self)]
+	 [proto (server:get-config self 'protocol)]
+	 [port (server:get-config self 'listen)]
+	 )
+    (format #t "*Starting [~a] ...~%" sname)
+    (format #t "  [~a] is ~a server which's listenning in port ~a~%"
+	    sname proto port)
+    ))
+
 (define-method (server:show-config (self <server>))
   (let ([config (server:config self)])
     (print-conf-table config)))
@@ -87,7 +99,7 @@
   )
 
 (define-method (server:run (self <server>))
-  (let* ([server-port (server:get-config self 'port)]
+  (let* ([server-port (server:get-config self 'listen)]
 	 [server-protocol (server:get-config self 'proto)]
 	 [server-name (server:name self)]
 	 [server-software *ragnarok-version*]
@@ -141,6 +153,8 @@
     
 ;; listen in the port then return the socket
 (define-method (server:listen-port (self <server>) port)
+  (if (not port)
+      (error "Listen port isn't specified!" (server:name self)))
   (let* ([s (socket PF_INET SOCK_STREAM 0)]
 	 [max-req (server:get-config self 'max-request)]
 	 )

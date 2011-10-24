@@ -16,6 +16,7 @@
 (define-module (ragnarok main)
   #:use-module (ragnarok env)
   #:use-module (ragnarok server)
+  #:use-module (ragnarok config)
   #:use-module (ragnarok version)
   #:use-module (ragnarok utils)
   #:use-module (oop goops)
@@ -138,6 +139,26 @@ God bless hacking."
   (sigaction SIGTERM ragnarok-SIGTERM-handler) ;; catch kill signal
   )
 
+(define (ragnarok-server-start)
+  (let* ([snl (get-sub-server-name-list)]
+	 [cnt (length snl)]
+	 )
+    (let lp ([server-list '()] [rest snl])
+      (if (null? rest)
+	  (begin
+	    (set! (env:server-list env) server-list)
+	    (format #t "~a sub-servers activated!~%" cnt)
+	    )
+	  (let* ([sname (car rest)]
+		 [server (make <server> #:name sname)]
+		 )
+	    (server:print-start-info server)
+	    (server:run server)
+	    (lp (car server server-list) (cdr rest))
+	    ) ;; end let*
+	  ) ;; end if 
+      )))
+  
 (define main
   (lambda (args)
     (let* ((options 
@@ -159,9 +180,11 @@ God bless hacking."
       ;; daemonize
       (let ([i (ragnarok-fork)])
 	(cond
-	 ((> i 0) (exit)) ;; exit parent
+	 ((> i 0) (primitive-exit)) ;; exit parent
 	 ((< i 0) (error "Ragnarok: fork error!")))
 	)
+
+
 
       ;; child(daemon) continue
       (setsid)
@@ -193,6 +216,7 @@ God bless hacking."
 	
 	(write (getpid) lfp)
 	(close lfp)
+
 	)
 
       ;; TODO: signal handler register
@@ -201,6 +225,6 @@ God bless hacking."
       ;; TODO: overload cmd parameters to default parameters
       ;;       #f for default ,otherwise overload it.
 
-      (let ((server (make <server>)))
-	(server:run server))
+      (ragnarok-server-start)
+
     )))
