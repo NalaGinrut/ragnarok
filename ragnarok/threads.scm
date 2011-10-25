@@ -15,8 +15,12 @@
 
 (define-module (ragnarok threads)
   #:use-module (ice-9 threads)
+  #:use-module (ragnarok utils)
   #:export (threads:enqueue
-	    threads:new)
+	    threads:new
+	    ragnarok-exclusive-try
+	    ragnarok-call-with-new-fork
+	    ragnarok-call-with-new-thread)
   )
 
 ;; we use *futures* in Guile to implement thread pool
@@ -36,3 +40,33 @@
      (threads:enqueue proc . args)
      )))
 
+(define-syntax ragnarok-exclusive-try 
+  (syntax-rules ()
+    ((_ body ...)
+     (monitor body ...)
+     )))
+
+(define-syntax ragnarok-call-with-new-thread
+  (syntax-rules ()
+    ((_ thunk ...)
+     (call-with-new-thread thunk ...)
+     )))
+
+(define ragnarok-call-with-new-fork
+  (lambda (thunk)
+    (if (not (thunk? thunk))
+	(error ragnarok-call-with-new-fork
+	       "Not a thunk!~%"
+	       thunk))
+    (let ([i (ragnarok-fork)])
+      (cond
+       ((< i 0)
+	(error ragnarok-call-with-new-fork
+	       "Fork error!~%"))
+       ((= i 0)
+	(apply thunk '()))
+       ))
+    ))
+	
+	       
+	

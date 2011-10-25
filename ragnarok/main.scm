@@ -18,6 +18,7 @@
   #:use-module (ragnarok server)
   #:use-module (ragnarok config)
   #:use-module (ragnarok version)
+  #:use-module (ragnarok threads)
   #:use-module (ragnarok utils)
   #:use-module (oop goops)
   #:use-module (ice-9 getopt-long)
@@ -143,22 +144,47 @@ God bless hacking."
   (let* ([snl (get-sub-server-name-list)]
 	 [cnt (length snl)]
 	 )
-    (let lp ([server-list '()] [rest snl])
+    (let lp ([server-list '()] [rest snl] [n cnt])
       (if (null? rest)
 	  (begin
-	    (set! (env:server-list env) server-list)
-	    (format #t "~a sub-servers activated!~%" cnt)
-	    )
+	    (ragnarok-exclusive-try
+	     (set! (env:server-list ragnarok-env) server-list)
+	     (format #t "~a sub-servers activated!~%" n)
+	    ))
 	  (let* ([sname (car rest)]
 		 [server (make <server> #:name sname)]
 		 )
-	    (server:print-start-info server)
-	    (server:run server)
-	    (lp (car server server-list) (cdr rest))
+	    (ragnarok-call-with-new-thread
+	     (lambda ()
+	       (server:print-start-info server)
+	       (server:run server)
+	       )) ;; end ragnarok-call-with-new-fork
+	    (lp (cons server server-list) (cdr rest) (1- cnt))
 	    ) ;; end let*
 	  ) ;; end if 
       )))
-  
+
+(define (display-startup-message)
+  (format #t "~a~%" version-str)
+  (newline)
+  (display "===================")
+  (newline)
+  (format #t "Ragnarok starting...~%")
+  (format #t "If you want to check the log, type ragnarok-show-[err/log]~%")
+  )
+
+(define (show-subserver-info)
+  (let* ([snl (get-sub-server-name-list)]
+	 [cnt (length snl)]
+	 )
+    (format #t "Find ~a sub-servers from you machine:~%" cnt)
+    (for-each (lambda (sname)
+		(format #t "[~a] " sname)
+		)
+	      snl)
+    (newline)
+    ))
+
 (define main
   (lambda (args)
     (let* ((options 
@@ -184,7 +210,8 @@ God bless hacking."
 	 ((< i 0) (error "Ragnarok: fork error!")))
 	)
 
-
+      ;; print greeting message
+      (display-startup-message)
 
       ;; child(daemon) continue
       (setsid)
@@ -196,6 +223,7 @@ God bless hacking."
 
       (let* ([i (open "/dev/null" O_RDWR)]
 	     [e (open *ragnarok-err-log-file* (logior O_CREAT O_RDWR))] 
+	     [log (open *ragnarok-log-file* (logior O_CREAT O_RDWR))]
 	     [lfp (open *ragnarok-lock-file* 
 			(logior O_RDWR O_CREAT)
 			#o640)]
@@ -203,7 +231,7 @@ God bless hacking."
 	
 	;;(for-each close (iota 3)) ;; close all ports
 	(redirect-port i (current-input-port)) ;; stdin
-	(redirect-port e (current-output-port))
+	(redirect-port log (current-output-port))
 	(redirect-port e (current-error-port)) ;; stderr
 	(umask 022)
 	
@@ -216,7 +244,6 @@ God bless hacking."
 	
 	(write (getpid) lfp)
 	(close lfp)
-
 	)
 
       ;; TODO: signal handler register
@@ -224,7 +251,9 @@ God bless hacking."
 
       ;; TODO: overload cmd parameters to default parameters
       ;;       #f for default ,otherwise overload it.
-
+        
+      ;; show the active subserver information
+      (show-subserver-info)
+      
       (ragnarok-server-start)
-
-    )))
+      )))

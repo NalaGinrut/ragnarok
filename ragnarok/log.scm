@@ -17,6 +17,7 @@
   #:use-module (ragnarok config)
   #:use-module (ragnarok utils)
   #:use-module (ragnarok msg)
+  #:use-module (ragnarok threads)
   #:use-module (oop goops)
   #:export (<logger>
 	    logger:open-proper-port
@@ -50,6 +51,7 @@
   (port #:init-value #f #:accessor logger:port)
   )
   
+	      
 (define *log-ports*
   '((console-port (current-output-port))
     (err-port (current-error-port))
@@ -62,13 +64,14 @@
 
 (define-method (logger:printer (self <logger>) msg)
   (let ([port (logger:port self)])
-	(if port
-	    (log-printer msg port)
-	    (print-to-all-ports 
-	     msg 
-	     (cons `(log-port ,port)
-		   *log-ports*))
-	    )))
+    (if port
+	(log-printer msg port)
+	(print-to-all-ports 
+	 msg 
+	 (cons `(log-port ,port)
+	       *log-ports*))
+	) ;; end ragnarok-exclusive-try
+    ))
    
 (define-method (initialize (self <logger>) initargs)
   (next-method) ;; call regular routine
@@ -94,7 +97,9 @@
 	   [type (object->string (msg:type msg))]
 	   [info (msg:info msg)]
 	   )
-      (format port "~a:~% [~a] ~a~%" time type info)
+      (ragnarok-exclusive-try
+       (format port "~a:~% [~a] ~a~%" time type info)
+       )
       
       ;; FIXME: Could this sync-process drag down server's speed?
       ;;(force-output port)

@@ -122,11 +122,17 @@
 	    (server:print-status self 
 				 'client-info 
 				 (get-client-info client-details))
-	    ;; FIXME: I need to spawn new thread for a request-handler
-	    (request-handler config logger client-connection subserver-info)
-	    (shutdown conn-socket 2) ;; can be closed after trans finished.
-	    (close-port conn-socket)      
-	    (logger:sync logger)
+
+	    ;; deal with request in new thread
+	    (call-with-new-thread
+	     (lambda ()
+	       ;; FIXME: I need to spawn new thread for a request-handler
+	       (request-handler config logger client-connection subserver-info)
+	       (shutdown conn-socket 2) ;; can be closed after trans finished.
+	       (close-port conn-socket)      
+	       (logger:sync logger)
+	       ))
+
 	    (active-loop)
 	    )
 	  ))))
