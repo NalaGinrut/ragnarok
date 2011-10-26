@@ -144,22 +144,29 @@ God bless hacking."
   (let* ([snl (get-sub-server-name-list)]
 	 [cnt (length snl)]
 	 )
-    (let lp ([server-list '()] [rest snl] [n cnt])
+    (let lp ([server-list '()] [rest snl])
       (if (null? rest)
 	  (begin
-	    (ragnarok-exclusive-try
-	     (set! (env:server-list ragnarok-env) server-list)
-	     (format #t "~a sub-servers activated!~%" n)
-	    ))
+	    (set! (env:server-list ragnarok-env) server-list)
+	    (let ([n (length server-list)])
+	      (cond
+	       ((> n 1)
+		(format #t "~a sub-servers activated!~%" n))
+	       ((= n 1)
+		(format #t "~a sub-server activated!~%" n))
+	       ((= n 0)
+		(format #t "No sub-server activated!~%"))
+	       )) ;; end let
+	    ) ;; end begin
 	  (let* ([sname (car rest)]
 		 [server (make <server> #:name sname)]
 		 )
+	    (server:print-start-info server)
 	    (ragnarok-call-with-new-thread
 	     (lambda ()
-	       (server:print-start-info server)
 	       (server:run server)
-	       )) ;; end ragnarok-call-with-new-fork
-	    (lp (cons server server-list) (cdr rest) (1- cnt))
+	       )) ;; end ragnarok-call-with-new-thread
+	    (lp (cons server server-list) (cdr rest))
 	    ) ;; end let*
 	  ) ;; end if 
       )))
@@ -220,6 +227,8 @@ God bless hacking."
       ;; delete old err log file ,or it will mess up with old-old err log
       (if (file-exists? *ragnarok-err-log-file*)
 	  (delete-file *ragnarok-err-log-file*))
+      (if (file-exists? *ragnarok-log-file*)
+	  (delete-file *ragnarok-log-file*))
 
       (let* ([i (open "/dev/null" O_RDWR)]
 	     [e (open *ragnarok-err-log-file* (logior O_CREAT O_RDWR))] 
@@ -256,4 +265,13 @@ God bless hacking."
       (show-subserver-info)
       
       (ragnarok-server-start)
+
+      ;; never quit
+      (eternal-loop)
       )))
+
+(define (eternal-loop)
+  (let lp ()
+    (lp)
+    ))
+

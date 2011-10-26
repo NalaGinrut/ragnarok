@@ -22,6 +22,7 @@
   #:use-module (ragnarok log)
   #:use-module (ragnarok utils)
   #:use-module (ragnarok info)
+  #:use-module (ragnarok threads)
   #:use-module (ragnarok version)
   #:export (<server>
 	    server:socket server:config server:handler
@@ -79,9 +80,11 @@
 	 [proto (server:get-config self 'protocol)]
 	 [port (server:get-config self 'listen)]
 	 )
-    (format #t "*Starting [~a] ...~%" sname)
-    (format #t "  [~a] is ~a server which's listenning in port ~a~%"
-	    sname proto port)
+    (ragnarok-exclusive-try
+     (format #t "*Starting [~a] ...~%" sname)
+     (format #t "  [~a] is ~a server which's listenning in port ~a~%"
+	     sname proto port)
+     ) ;; end ragnarok-exclusive-try
     ))
 
 (define-method (server:show-config (self <server>))
@@ -124,7 +127,7 @@
 				 (get-client-info client-details))
 
 	    ;; deal with request in new thread
-	    (call-with-new-thread
+	    (ragnarok-call-with-new-thread
 	     (lambda ()
 	       ;; FIXME: I need to spawn new thread for a request-handler
 	       (request-handler config logger client-connection subserver-info)
