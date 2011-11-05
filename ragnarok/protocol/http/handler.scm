@@ -21,13 +21,19 @@
   #:use-module (ragnarok info)
   #:use-module (ragnarok version)
   #:use-module (ragnarok utils)
+  #:export (http-directory-serv-handler
+	    http-static-page-serv-handler
+	    http-regular-cgi-handler
+	    )
   )
-
-(module-export-all! (current-module))
 
 (define open-pipe (@ (ice-9 popen) open-pipe))
 (define close-pipe (@ (ice-9 popen) close-pipe))
 (define read-line (@ (ice-9 rdelim) read-line))
+
+(define *no-ETag* #f) ;; only static has ETag
+(define *dynamic* #f) ;; dynamic page should be "text/html"
+(define *static* #t) ;; static page should be its own mime type
 
 ;; NOTE: each serv-handler returns 3 values, bv&status&file-stat
 ;;-------serv handler-----------------
@@ -43,24 +49,23 @@
 	      ))
       (lambda (bv status)
 	(http-response-log logger status)
-	(values bv status #f))) ;; return fst as #f, then we could deal with dir.
+	(values bv status *no-ETag *dynamic*))) ;; return fst as #f, then we could deal with dir.
     ))
 
 (define http-regular-cgi-handler
   (lambda (logger filename server-info)
     (call-with-values
 	(lambda ()
-	  (let ([fixed-target (path-fix filename)])
-	    (if (file-exists? fixed-target)
+	  (if (file-exists? filename)
 		(ragnarok-regular-cgi-handler 
-		 (http-make-cgi-type fixed-target server-info))
+		 (http-make-cgi-type filename server-info))
 		;; file doesn't exist ,throw *Not-Found*
 		(http-error-page-serv-handler logger *Not-Found* server-info)
-		))
+		)
 	  );; end lambda()
       (lambda (bv status fst)
 	(http-response-log logger status)
-	(values bv status fst))
+	(values bv status fst *no-ETag* *dynamic*))
       );; end call-with-values
     ))
 
@@ -77,39 +82,24 @@
 	      ))
       (lambda (bv status fst)
 	(http-response-log logger status)
-	(values bv status fst)))
+	(let* ([mtime (if fst 
+			  (stat:mtime fst)
+			  (stat:mtime (stat file)))] ;; return dir's mtime
+	       [etag (generate-etag bv mtime)]
+	       )
+	  (values bv status fst etag *static*)))
+      ) ;; end call-with-values
     ))
     
-(define http-dynamic-page-serv-handler
-  (lambda (logger filename server-info)
-    (call-with-values
-	(lambda ()
-	  (cond
-	   ((not(file-exists? filename))
-	    (http-error-page-serv-handler logger *Not-Found*))
-	   ((file-is-exec-script? filename)
-	    (get-dynamic-page logger filename)
-	    ;;Don't remove this exception handle, in case the file is deleted
-	    ;;but it passed the first check
-	    ))
-      (lambda (bv status fst)
-	(http-response-log logger status)
-	(values bv status fst)))
-
-  ;;(make-serv-handler logger filename get-dynamic-page)
-  ;; TODO: search file and call templete handler to render cgi script
-  )))
 ;;-------serv handler end-----------------
 
 
 ;;-------method handler-----------------
 
-
 (define get-static-page
   (lambda (logger target)
     (let* ([fst (stat target)]
-	   [perms (stat:perms fst)]
-	   [ok (check-stat-perms perms '(u+r g+r o+r))]
+	   [ok (check-file-perms target #o444)]
 	   )
       
       (if ok
@@ -123,8 +113,7 @@
 (define get-directory-in-html
   (lambda (logger dir)
     (let* ([fst (stat dir)]
-	   [perms (stat:perms fst)]
-	   [ok (logand perms #o555)]
+	   [ok (check-file-perms dir #o555)]
 	   )
       ;; TODO: 
       ;; 1. check the access permission;
@@ -156,4 +145,10 @@
 	  (http-error-page-serv-handler logger *Forbidden*)
 	  ))))
 ;;-------method handler end-----------------
+
+(define generate-etag
+  (lambda (bv mtime)
+    ;; TODO: generate etag, now it just return a null string.
+    (format #f "")
+    ))
 

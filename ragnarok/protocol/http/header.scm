@@ -29,9 +29,11 @@
 (define-syntax http-header
   (syntax-rules ()
     ((_ field value)
-     (format #f "~a: ~a"
-	     (string-capitalize (symbol->string field))
-	     value)
+     (if value
+	 (format #f "~a: ~a"
+		 (string-capitalize (symbol->string field))
+		 value)
+	 #f)
      )))
 
 (define *regular-headers*

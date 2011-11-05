@@ -229,6 +229,7 @@
 (chemical/x-csml (csml csm       ))
 (chemical/x-ctx (ctx        ))
 (chemical/x-cxf (cxf cef       ))
+(#chemical/x-daylight-smiles (smi        ))
 (chemical/x-embl-dl-nucleotide (emb embl       ))
 (chemical/x-galactic-spc (spc        ))
 (chemical/x-gamess-input (inp gam gamin      ))
@@ -249,6 +250,7 @@
 (chemical/x-mdl-rxnfile (rxn        ))
 (chemical/x-mdl-sdfile (sd sdf       ))
 (chemical/x-mdl-tgf (tgf        ))
+(#chemical/x-mif (mif        ))
 (chemical/x-mmcif (mcif        ))
 (chemical/x-mol2 (mol2        ))
 (chemical/x-molconn-Z (b        ))
@@ -372,8 +374,4 @@
 (x-conference/x-cooltalk (ice        ))
 (x-epoc/x-sisx-app (sisx        ))
 (x-world/x-vrml (vrm vrml wrl      ))
-
-
-;; ragnarok mime extension
-(application/x-guile-tpl (gl scm))
 )

@@ -23,6 +23,9 @@
 	    )
   )
 
+
+(define *no-ETag* #f)
+(define *dynamic* #f)
 (define start-sign "<% ")
 (define startd-sign "<%= ")
 (define end-sign " %>")
@@ -223,16 +226,15 @@
   (lambda (logger filename server-info)
     (call-with-values
 	(lambda ()
-	  (let ([fixed-target (path-fix filename)])
-	    (if (file-exists? fixed-target)
-		(run-guile-cgi
-		 (http-make-cgi-type fixed-target server-info))
-		;; doesn't exists
-		(values (http-error-page-serv-handler logger *Not-Found*)
-			*Not-Found*))
-	    ))
+	  (if (file-exists? filename)
+	      (run-guile-cgi
+	       (http-make-cgi-type filename server-info))
+	      ;; doesn't exists
+	      (values (http-error-page-serv-handler logger *Not-Found*)
+		      *Not-Found*))
+	  )
       (lambda (bv status fst)
 	(http-response-log logger status)
-	(values bv status fst)
+	(values bv status fst #f #f)
 	))))
 

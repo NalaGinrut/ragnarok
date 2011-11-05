@@ -55,6 +55,7 @@
 	   [auth-type (request-authorization request)]
 	   [content-length (request-content-length request)]
 	   [content-type (request-content-type request)]
+	   ;; FIXME: use path-fix here
 	   [target (uri-path (request-uri request))]
 	   [remote-info 
 	    (make-remote-info remote-host remote-addr remote-ident
@@ -88,7 +89,6 @@
 			     "Invalid Status")]
 		 [mt (->global-time mtime)] ;;return to client as GMT.
 		 [now-time (get-global-current-time)]
-		 [return-type "text/html"]
 		 [response (build-response
 			    #:version 1.1
 			    #:code status
@@ -99,7 +99,7 @@
 					(eTag . ,etag)
 					;; NOTE: keep these two lines last!
 					(content-length . ,bv-len)
-					(content-type . ,return-type)
+					(content-type . ,type)
 					)
 			    #:charset charset
 			    )]

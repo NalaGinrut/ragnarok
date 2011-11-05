@@ -48,9 +48,11 @@
 (define (type:symbol x) (string->symbol x))
 (define (type:integer x) (string->number x))
 (define (type:bool x) (string=? x "yes"))
-(define (type:list x)
+(define (type:sym-list x)
   (let ([l (string-split x #\,)])
-    (map string-trim-both l)
+    (map (lambda (e)
+	   (string->symbol (string-trim-both e)))
+	 l)
     ))
 
 (define *valid-conf-list*
@@ -61,7 +63,7 @@
     (listen ,type:integer)
     (charset ,type:string)
     (cgi ,type:bool)
-    (script-ext ,type:list)
+    (with-cgi ,type:sym-list)
     ))
 
 (define verify-key-val

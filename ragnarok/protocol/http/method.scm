@@ -33,8 +33,8 @@
 	     )
   )
 
-(define get-mime-handler (@ (ragnarok protocol http mime) get-mime-handler))
 (define get-type-from-mime (@ (ragnarok protocol http mime) get-type-from-mime))
+(define get-mime-handler (@ (ragnarok protocol http mime) get-mime-handler))
 (define gcrypt:sha1 (@ (ragnarok gcrypt mda) gcrypt:sha1))
 (define uri-path (@ (web uri) uri-path))
 (define request-uri (@ (web request) request-uri))
@@ -43,9 +43,9 @@
   (lambda (method)
     (get-arg *method-handler-list* method)))
 
-(define run-with-handler?
+(define run-with-CGI?
   (lambda (ext config)
-    (let ([ext-list (get-config config 'script-ext)])
+    (let ([ext-list (get-config config 'with-cgi)])
       (list-has? ext-list ext)
       )))
 
@@ -98,12 +98,11 @@
 	   [target (remote-info:target remote-info)]
 	   [root-path (get-config config 'root-path)]
 	   [file (string-append root-path target)]
-	   [script-ext (get-config config 'script-ext)]
 	   [use-cgi (get-config config 'cgi)]
 	  	   
 	   ;; FIXME: I need this m-handler later
 	   [mime (get-request-mime file)]
-	   [script-run-with-handler (run-with-handler? mime config)]
+	   [script-run-with-CGI (run-with-CGI? mime config)]
 	   [m-handler (get-mime-handler mime)]
 	   )
 
@@ -118,7 +117,7 @@
 	      ((eqv? mime '*no-such-file*) 
 	       (http-error-page-serv-handler logger *Not-Found* server-info))
 	      ((not m-handler)
-	       (if (and (not script-run-with-handler)
+	       (if (and script-run-with-CGI
 			use-cgi)
 		   (call-with-values
 		       (lambda ()
@@ -129,15 +128,20 @@
 							 status
 							 server-info)
 			   (values bv status fst))))
-		   (http-error-page-serv-handler logger 
-						 *CGI-Not-Allowed*
-						 server-info)))
+
+		   ;; if no handler and not a CGI allowed file,
+		   ;; return it as static page
+		   (http-static-page-serv-handler logger 
+						  file
+						  server-info)))
 	      (else
 	       ;; deal with files
 	       (m-handler logger file server-info)
 	       )))
-	(lambda (bv status fst)
-	  (let* ([type (get-type-from-mime mime)]
+	(lambda (bv status fst etag *not-html*)
+	  (let* ([type (or 
+			(and *not-html* (get-type-from-mime mime))
+			"text/html")]
 		 [bv-len (if fst 
 			     (stat:size fst)
 			     (if bv
@@ -146,7 +150,6 @@
 		 [mtime (if fst 
 			    (stat:mtime fst)
 			    (stat:mtime (stat file)))] ;; return dir's mtime
-		 [etag (generate-etag bv mtime)]
 		 )
 	    (values bv bv-len status type etag mtime))
 	  ))
@@ -164,9 +167,4 @@
     ("PATCH" ,http-method-PATCH-handler)
     ))
 
-(define generate-etag
-  (lambda (bv mtime)
-    ;; TODO: generate etag, now it just return a null string.
-    ""
-    ))
 

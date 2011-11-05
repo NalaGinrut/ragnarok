@@ -128,14 +128,14 @@ SCM scm_mmr_path_fix(SCM target)
 #define FUNC_NAME "path-fix"
 {
   char *path = NULL;
-  char *fixed = NULL; // fiexed path
+  char *fixed = NULL; // fixed path
   char *tmp = NULL;
   int path_len = 0;
   int bi = 0;
   int pi = 0;
   SCM ret;
   
-  SCM_VALIDATE_STRING(1, target);
+  SCM_VALIDATE_STRING(1 ,target);
 
   path = scm_to_locale_string(target);
   path_len = strlen(path);
@@ -150,13 +150,16 @@ SCM scm_mmr_path_fix(SCM target)
     {}
 
   /* NOTE: The result won't contain '/' at the end,
-   * because we'll append *path '/' filenam* finally.
+   * because we'll append *path '/' filename* finally.
    */
 
   tmp = fix_prefix(fixed+1);
   ret = scm_from_locale_string(tmp);
+
   free(fixed);
   fixed = NULL;
+  tmp = NULL;
+  path = NULL;
 
   return ret;
 }

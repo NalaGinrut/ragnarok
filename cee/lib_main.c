@@ -29,6 +29,7 @@ SCM scm_mmr_create_this_path(SCM path ,SCM mode);
 SCM scm_mmr_waitpid(SCM pid ,SCM options);
 SCM scm_mmr_fork();
 SCM scm_mmr_gcrypt_mda(SCM ori_str ,SCM algo);
+SCM scm_mmr_test(SCM target);
 
 void init_lib()
 {
@@ -39,4 +40,5 @@ void init_lib()
   scm_c_define_gsubr("ragnarok-waitpid" ,1 ,1 ,0 ,scm_mmr_waitpid);
   scm_c_define_gsubr("ragnarok-fork" ,0 ,0 ,0 ,scm_mmr_fork);
   scm_c_define_gsubr("gcrypt:mda", 2, 0, 0, scm_mmr_gcrypt_mda);
+  scm_c_define_gsubr("mmr-test" ,1 ,0 ,0 ,scm_mmr_test);
 }

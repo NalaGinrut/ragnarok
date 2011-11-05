@@ -14,6 +14,7 @@ MOD_PATH := $(shell guile -c "(display (car %load-path))")
 MOD_TARGET_PATH := $(MOD_COMPILED_PATH)/$(MOD_PATH)/ragnarok
 GUILEC := LD_LIBRARY_PATH=$(TEMP_LIB_PATH) guild compile
 RAGNAROK_ETC := etc/ragnarok
+RAGNAROK_TOOLS := tools
 GUILE := @GUILE@
 VERSION := @PACKAGE_VERSION@
 PREFIX := @prefix@
@@ -46,7 +47,7 @@ $(BIN_OBJ)/ragnarok: bin/ragnarok.c
 $(MOD)/version.scm:
 	$(V)$(GUILE) -c '(call-with-output-file "$@" (lambda (port) (format port "(define-module (ragnarok version) #:export (*ragnarok-version*)) (define *ragnarok-version* \"Ragnarok ~a\")" "$(VERSION)")))'
 
-.PHONY: clean modules install distclean distclean-mk bin version test
+.PHONY: clean modules install distclean distclean-mk bin version test gen-mime
 
 clean:
 	-rm -frd $(OBJ)
@@ -74,6 +75,9 @@ modules: $(mod-ofile)
 version: $(MOD)/version.scm
 
 bin: $(OBJ)/bin/ragnarok
+
+gen-mime:
+	$(RAGNAROK_TOOLS)/regen-mime-list.sh > $(RAGNAROK_ETC)/mime.list
 
 test:
 	@echo $(PREFIX)

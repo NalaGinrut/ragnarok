@@ -38,9 +38,11 @@
     (call-with-output-string
      (lambda (p)
        (for-each (lambda (h)
-		   (format p "~%~a"
-			   (http-header (car h) 
-					(cdr h))))
+		   (let ([head-str (http-header (car h)
+						(cdr h))])
+		     (if head-str
+			 (format p "~%~a" head-str)
+			 )))
 		 headers)
        ))))
 
