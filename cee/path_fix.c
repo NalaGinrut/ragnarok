@@ -138,13 +138,19 @@ SCM scm_mmr_path_fix(SCM target)
   SCM_VALIDATE_STRING(1 ,target);
 
   path = scm_to_locale_string(target);
+
+  if(!strstr(path ,"/.."))
+    {
+      // no relative path
+      ret = target;
+      goto end;
+    }
+
   path_len = strlen(path);
   path_len = path_len>MAX_PATH_LEN? MAX_PATH_LEN : path_len;
   fixed = (char *)calloc(1 ,path_len);
   fixed[0] = '\n'; // sentinal
 
-  if(!memchr(path ,'.' ,strlen(path)))
-    return SCM_BOOL_F; // no relative path
 
   while(get_dir(path ,fixed+1 ,&pi ,&bi))
     {}
@@ -161,6 +167,7 @@ SCM scm_mmr_path_fix(SCM target)
   tmp = NULL;
   path = NULL;
 
+ end:
   return ret;
 }
 #undef FUNC_NAME

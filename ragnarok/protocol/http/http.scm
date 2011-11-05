@@ -56,7 +56,7 @@
 	   [content-length (request-content-length request)]
 	   [content-type (request-content-type request)]
 	   ;; FIXME: use path-fix here
-	   [target (uri-path (request-uri request))]
+	   [target (path-fix (uri-path (request-uri request)))]
 	   [remote-info 
 	    (make-remote-info remote-host remote-addr remote-ident
 			      remote-user request-method query-string
