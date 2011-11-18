@@ -53,12 +53,12 @@ AC_ARG_ENABLE([enable-libgcrypt],
   fi)
 
 AC_CHECK_HEADER([sys/epoll.h],
-	        [AC_DEFINE([__HAVE_SYS_EPOLL_H__], 1, [])],
+	        [AC_DEFINE([__HAVE_SYS_EPOLL_H__], [], [Has epoll.])],
                 [],
 		[])
 
 AC_CHECK_HEADER([sys/kqueue.h],
-	        [AC_DEFINE([__HAVE_SYS_KQUEUE_H__], 1, [])],
+	        [AC_DEFINE([__HAVE_SYS_KQUEUE_H__], [], [Has kqueue.])],
                 [],
 		[])
 
