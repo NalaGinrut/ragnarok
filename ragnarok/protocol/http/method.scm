@@ -50,53 +50,54 @@
       )))
 
 (define http-method-POST-handler
-  (lambda (config logger server-info)
+  (lambda (logger server-info)
     #t
     ))
 
 (define http-method-DELETE-handler
-  (lambda (config logger server-info)
+  (lambda (logger server-info)
     #t
     ))
 
 ;; returned as GET but without content
 (define http-method-HEAD-handler
-  (lambda (config logger server-info)
+  (lambda (logger server-info)
     ;; NOTE: We must read out the content of file, because we need to
     ;;       generate ETAG.
     (call-with-values
 	(lambda ()
-	  (http-method-GET-handler config logger server-info))
+	  (http-method-GET-handler logger server-info))
       (lambda (bv bv-len status type etag mtime)
        	(values #f bv-len status type etag mtime)))
     ))
 
 (define http-method-PUT-handler
-  (lambda (config logger server-info)
+  (lambda (logger server-info)
     #t
     ))
 (define http-method-CONNECT-handler
-  (lambda (config logger server-info)
+  (lambda (logger server-info)
     #t
     ))
 (define http-method-OPTIONS-handler
-  (lambda (config logger server-info)
+  (lambda (logger server-info)
     #t
     ))
 (define http-method-TRACE-handler
-  (lambda (config logger server-info)
+  (lambda (logger server-info)
     #t
     ))
 (define http-method-PATCH-handler
-  (lambda (config logger server-info)
+  (lambda (logger server-info)
     #t
     ))
 
 (define http-method-GET-handler
-  (lambda (config logger server-info)
+  (lambda (logger server-info)
     (let* ([remote-info (server-info:remote-info server-info)]
+	   [subserver-info (server-info:subserver-info server-info)]
 	   [target (remote-info:target remote-info)]
-	   [root-path (get-config config 'root-path)]
+	   [root-path (subserver-info:server-root subserver-info)]
 	   [file (string-append root-path target)]
 	   [use-cgi (get-config config 'cgi)]
 	  	   

@@ -206,7 +206,7 @@
       )))
 
 (define regular-cgi-run
-  (lambda (cgi)
+  (lambda (cgi charset)
     (if (not (cgi-record? cgi))
 	(error regular-cgi-run "Not cgi-record-type!" cgi))
     (let* ([p-buf (pipe)]
@@ -214,6 +214,11 @@
 	   [w (cdr p-buf)]
 	   [i (ragnarok-fork)]
 	   )
+
+      ;; set charset
+      (set-port-encoding! w charset)
+      (set-port-encoding! r charset)
+
       (cond 
        ((< i 0)
 	(values #f *Fork-Error* #f))
@@ -252,12 +257,12 @@
 	))))
 		    
 (define ragnarok-regular-cgi-handler
-  (lambda (cgi)
+  (lambda (cgi charset)
     (if (not (cgi-record? cgi))
 	(error ragnarok-regular-cgi-handler "Not cgi-record-type!" cgi))
     (if (not (check-file-perms (cgi:target cgi) #o555)) ;; DON'T use "access?"
 	(values #f *Forbidden* #f) ;; no excute perms
-	(regular-cgi-run cgi)
+	(regular-cgi-run cgi charset)
 	)))
 
 (define (cgi:auth-type! cgi-env-table v)

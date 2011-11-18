@@ -49,26 +49,30 @@
 	      ))
       (lambda (bv status)
 	(http-response-log logger status)
-	(values bv status *no-ETag *dynamic*))) ;; return fst as #f, then we could deal with dir.
+	(values bv status *no-ETag *dynamic*))) 
+    ;; return fst as #f, then we could deal with dir.
     ))
 
 (define http-regular-cgi-handler
   (lambda (logger filename server-info)
-    (call-with-values
-	(lambda ()
-	  (if (file-exists? filename)
+    (let* ([subserver-info (server-info:subserver-info server-info)]
+	   [charset (subserver-info:server-charset subserver-info)]
+	   )
+      (call-with-values
+	  (lambda ()
+	    (if (file-exists? filename)
 		(ragnarok-regular-cgi-handler 
-		 (http-make-cgi-type filename server-info))
+		 (http-make-cgi-type filename server-info)
+		 charset)
 		;; file doesn't exist ,throw *Not-Found*
 		(http-error-page-serv-handler logger *Not-Found* server-info)
 		)
-	  );; end lambda()
-      (lambda (bv status fst)
-	(http-response-log logger status)
-	(values bv status fst *no-ETag* *dynamic*))
-      );; end call-with-values
-    ))
-
+	    );; end lambda()
+	(lambda (bv status fst)
+	  (http-response-log logger status)
+	  (values bv status fst *no-ETag* *dynamic*))
+	);; end call-with-values
+      )))
       
 (define http-static-page-serv-handler
   (lambda (logger filename server-info)
@@ -124,26 +128,23 @@
 	  ;; print directory in html
 	  ;; FIXME: Guile haven't implement "scandir" yet ,we use pipe here.
 	  ;;        Maybe I should submit a patch to guile-dev for this.
-	  (let* ([cmd (string-append "ls -a " dir)] 
-		 [dpipe (open-pipe cmd OPEN_READ)]
-		 )
+	  (let ([dir-list (scandir dir)])
 	    (values
 	     (call-with-output-string  
 	      (lambda (port) 
-		(let lp ((d (read-line dpipe))) 
-		  (if (not (eof-object? d)) 
-		      (if (file-is-directory? d) 
-			  (format port "~a - directory~%" d) 
-			  (format port "~a - file~%" d)) 
-		      (lp (readdir dir)))
-		  (close-pipe dpipe)
-		     )))
-	     *OK*
-	     fst))
+		(for-each 
+		 (lambda (d)
+		   (if (file-is-directory? d) 
+		       (format port "~a - directory~%" d) 
+		       (format port "~a - file~%" d))) ;; end lambda (d)
+		 dir-list
+		 )))
+	      *OK*
+	      fst))
 	  
 	  ;; return Forbidden page
 	  (http-error-page-serv-handler logger *Forbidden*)
-	  ))))
+	  )))))
 ;;-------method handler end-----------------
 
 (define generate-etag

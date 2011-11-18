@@ -106,12 +106,14 @@
 	 [server-protocol (server:get-config self 'proto)]
 	 [server-name (server:name self)]
 	 [server-software *ragnarok-version*]
+	 [server-charset (server:get-config self 'charset)]
+	 [server-root (server:get-config self 'root-path)]
 	 [subserver-info 
 	  (make-subserver-info server-port server-protocol
-			       server-name server-software)]
+			       server-name server-software
+			       server-charset server-root)]
 	 [s (server:listen-port self server-port)]
 	 [request-handler (server:handler self)]
-	 [config (server:config self)]
 	 [logger (server:logger self)]
 	 	 )
     ;; response loop
@@ -130,7 +132,7 @@
 	    (ragnarok-call-with-new-thread
 	     (lambda ()
 	       ;; FIXME: I need to spawn new thread for a request-handler
-	       (request-handler config logger client-connection subserver-info)
+	       (request-handler logger client-connection subserver-info)
 	       (shutdown conn-socket 2) ;; can be closed after trans finished.
 	       (close-port conn-socket)      
 	       (logger:sync logger)

@@ -52,5 +52,15 @@ AC_ARG_ENABLE([enable-libgcrypt],
     RAGNAROK_WITH_LIBGCRYPT=1
   fi)
 
+AC_CHECK_HEADER([sys/epoll.h],
+	        [AC_DEFINE([__HAVE_SYS_EPOLL_H__], 1, [])],
+                [],
+		[])
+
+AC_CHECK_HEADER([sys/kqueue.h],
+	        [AC_DEFINE([__HAVE_SYS_KQUEUE_H__], 1, [])],
+                [],
+		[])
+
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

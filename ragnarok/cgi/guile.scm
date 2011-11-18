@@ -23,7 +23,6 @@
 	    )
   )
 
-
 (define *no-ETag* #f)
 (define *dynamic* #f)
 (define start-sign "<% ")
@@ -178,7 +177,7 @@
   )
 
 (define run-guile-cgi
-  (lambda (cgi)
+  (lambda (cgi charset)
     (if (not (cgi-record? cgi))
 	(error regular-cgi-run "Not cgi-record-type!" cgi))
     (let* ([env-table (cgi:env-table cgi)]
@@ -196,6 +195,10 @@
 	   [r (car pp)]
 	   [w (cdr pp)]
 	   )
+
+      ;; set charset
+      (set-port-encoding! w charset)
+      (set-port-encoding! r charset)
       
       (with-fluids
        ([guile-cgi-outport-fluid w]
@@ -224,17 +227,21 @@
 
 (define cgi-guile-serv-handler
   (lambda (logger filename server-info)
-    (call-with-values
-	(lambda ()
-	  (if (file-exists? filename)
-	      (run-guile-cgi
-	       (http-make-cgi-type filename server-info))
-	      ;; doesn't exists
-	      (values (http-error-page-serv-handler logger *Not-Found*)
-		      *Not-Found*))
-	  )
-      (lambda (bv status fst)
-	(http-response-log logger status)
-	(values bv status fst #f #f)
-	))))
+    (let* ([subserver-info (server-info:subserver-info server-info)]
+	   [charset (subserver-info:server-charset subserver-info)]
+	   )
+      (call-with-values
+	  (lambda ()
+	    (if (file-exists? filename)
+		(run-guile-cgi
+		 (http-make-cgi-type filename server-info)
+		 charset)
+		;; doesn't exists
+		(values (http-error-page-serv-handler logger *Not-Found*)
+			*Not-Found*))
+	    )
+	(lambda (bv status fst)
+	  (http-response-log logger status)
+	  (values bv status fst #f #f)
+	  )))))
 

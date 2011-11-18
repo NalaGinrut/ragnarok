@@ -23,12 +23,15 @@
 
 (define-record-type subserver-info
   (make-subserver-info server-port server-protocol 
-		       server-name server-software)
+		       server-name server-software
+		       server-charset server-root)
   subserver-info?
   (server-port subserver-info:server-port)
   (server-protocol subserver-info:server-protocol)
   (server-name subserver-info:server-name)
   (server-software subserver-info:server-software)
+  (server-charset subserver-info:server-charset)
+  (server-root subserver-info:server-root)
   )
 
 (define-record-type remote-info

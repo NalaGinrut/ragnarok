@@ -39,7 +39,7 @@
 ;; FIXME: I need to wrap handler template into a macro.
 ;;        I believe users don't want to write some meta info by themselves.
 (define http-handler 
-  (lambda (config logger client-connection subserver-info)
+  (lambda (logger client-connection subserver-info)
     (let* ([conn-socket (car client-connection)]
 	   [conn-detail (cdr client-connection)]
 	   [request (get-request logger conn-socket)]
@@ -67,12 +67,13 @@
 			      subserver-info remote-info)]
 	   )
       (http-request-log logger request)
-      (http-response config logger server-info)
+      (http-response logger server-info)
       )))
 
 (define http-response
-  (lambda (config logger server-info)
-    (let* ([charset (get-config config 'charset)]
+  (lambda (logger server-info)
+    (let* ([subserver-info (server-info:subserver-info server-info)]
+	   [charset (subserver-info:server-charset subserver-info)]
 	   [connet-info (server-info:connect-info server-info)]
 	   [conn-socket (server-info:connect-socket server-info)]
 	   [subserver-info (server-info:subserver-info server-info)]
@@ -83,7 +84,7 @@
 
       (call-with-values
 	  (lambda ()
-	    (r-handler config logger server-info))
+	    (r-handler logger server-info))
 	(lambda (bv bv-len status type etag mtime)
 	  (let* ([reason (or (http-get-reason-from-status status)
 			     "Invalid Status")]
