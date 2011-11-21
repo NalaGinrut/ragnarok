@@ -59,17 +59,27 @@ static int scm_print_rag_fd_set(SCM fd_set_smob ,SCM port,
   return 1;
 }
 
+SCM scm_make_fd_set()
+#define FUNC_NAME "make-fd-set"
+{
+  scm_rag_fd_set *fsd = (scm_rag_fd_set*)scm_gc_malloc(sizeof(scm_rag_fd_set));
+
+  return scm_rag_fd_set2scm(fsd);
+}
+#undef FUNC_NAME
+  
 SCM scm_rag_select(SCM nfds ,SCM readfds ,SCM writefds,
-		   SCM exceptfds ,SCM ms ,SCM us)
+		   SCM exceptfds ,SCM second ,SCM usecond)
 #define FUNC_NAME "ragnarok-select"
 {
   int n = 0;
-  fd_set *rfd;
-  fd_set *wfd;
-  fd_set *efd;
-  long ms = 0L;
+  scm_rag_fd_set *rfd = NULL;
+  scm_rag_fd_set *wfd = NULL;
+  scm_rag_fd_set *efd = NULL;
+  scm_rag_fd_set *ready_set = NULL;
+  long s = 0L;
   long us = 0L;
-  SCM ret;
+  struct timeval tv;
 
   SCM_VALIDATE_INUM(1 ,nfds);
   SCM_ASSERT_FD_SET(readfds);
@@ -78,24 +88,27 @@ SCM scm_rag_select(SCM nfds ,SCM readfds ,SCM writefds,
 
   if(!SCM_UNBNDP(ms))
     {
-      SCM_VALIDATE_INUM(5 ,ms);
-      ms = (long)scm_from_long(ms);
+      SCM_VALIDATE_INUM(5 ,second);
+      s = (long)scm_from_long(second);
 
-      if(!SCM_UNBNDP(us))
+      if(!SCM_UNBNDP(usecond))
 	{
-	  SCM_VALIDATE_INUM(6 ,us);
-	  ns = (long)scm_from_long(us);
+	  SCM_VALIDATE_INUM(6 ,usecond);
+	  ns = (long)scm_from_long(usecond);
 	}
     }
 
   n = scm_from_int(nfds);
-  rfd = (fd_set*)SMOB_DATA(readfds);
-  wfd = (fd_set*)SMOB_DATA(writefds);
-  efd = (fd_set*)SMOB_DATA(exceptfds);
+  rfd = (scm_rag_fd_set*)SMOB_DATA(readfds);
+  wfd = (scm_rag_fd_set*)SMOB_DATA(writefds);
+  efd = (scm_rag_fd_set*)SMOB_DATA(exceptfds);
+    
+  tv.tv_sec = (long)s;
+  tv.tv_usec = (long)us;
 
-  // TODO
-
-  return ret;
+  ready_set = select(n ,rfd ,wfd ,efd ,&tv);
+  
+  return scm_rag_fd_set2scm(ready_set);
 }
 #undef FUNC_NAME
 
@@ -146,7 +159,16 @@ SCM scm_FD_ZERO(SCM set);
 
 void rag_select_init()
 {
-  
+  // fd_set SMOB init
+  scm_set_smob_print(scm_rag_fd_set_tag ,scm_print_rag_fd_set);
+
+  // procedure init
+  scm_c_define_gsubr("make-fd-set" ,0 ,0 ,0 ,scm_make_fd_set);
+  scm_c_define_gsubr("ragnarok-select" ,4 ,2 ,0 ,scm_rag_select);
+  scm_c_define_gsubr("FD-CLR" ,2 ,0 ,0 ,scm_FD_CLR);
+  scm_c_define_gsubr("FD-ISSET" ,2 ,0 ,0 ,scm_FD_ISSET);
+  scm_c_define_gsubr("FD-SET" ,2 ,0 ,0 ,scm_FD_SET);
+  scm_c_define_gsubr("FD-ZERO" ,1 ,0 ,0 ,scm_FD_ZERO);
 }
 
 #ifdef __cplusplus

@@ -16,23 +16,18 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef HAVE_CONFIG_H
-#  include <config.h>
-#endif
+#ifndef __RAGNAROK_LIB_MAIN_H__
+#define __RAGNAROK_LIB_MAIN_H__
 
-#include <libguile.h>
-#include "lib_main.h"
+SCM scm_mmr_path_fix(SCM target);
+SCM scm_mmr_scandir(SCM dir ,SCM filter);
+SCM scm_mmr_check_file_perms(SCM target ,SCM perms);
+SCM scm_mmr_create_this_path(SCM path ,SCM mode);
+SCM scm_mmr_waitpid(SCM pid ,SCM options);
+SCM scm_mmr_fork();
+SCM scm_mmr_gcrypt_mda(SCM ori_str ,SCM algo);
 
-void init_lib()
-{
-  scm_c_define_gsubr("path-fix" ,1 ,0 ,0 ,scm_mmr_path_fix);
-  scm_c_define_gsubr("check-file-perms" ,2 ,0 ,0 ,scm_mmr_check_file_perms);
-  scm_c_define_gsubr("scandir" ,1 ,1 ,0 ,scm_mmr_scandir);
-  scm_c_define_gsubr("create-this-path" ,1 ,1 ,0 ,scm_mmr_create_this_path);
-  scm_c_define_gsubr("ragnarok-waitpid" ,1 ,1 ,0 ,scm_mmr_waitpid);
-  scm_c_define_gsubr("ragnarok-fork" ,0 ,0 ,0 ,scm_mmr_fork);
-  scm_c_define_gsubr("gcrypt:mda", 2, 0, 0, scm_mmr_gcrypt_mda);
+// modules
+void init_event_module();
 
-  // init modules
-  init_event_module();
-}
+#endif // End of __RAGNAROK_LIB_MAIN_H__;

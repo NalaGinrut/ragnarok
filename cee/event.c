@@ -26,14 +26,17 @@
 
 #ifdef __HAS_SYS_EPOLL_H__
 #define RAGNAROK_EVENT_HANDLER epoll_handler
+#define RAGNAROK_EVENT_MODULE_INIT rag_epoll_init
 #endif // End of __HAS_SYS_EPOLL_H__;
 
 #ifdef __HAS_SYS_KQUEUE_H__
 #define RAGNAROK_EVENT_HANDLER kqueue_handler
+#define RAGNAROK_EVENT_MODULE_INIT rag_kqueue_init
 #endif // End of __HAS_SYS_KQUEUE_H__;
 
 #ifndef __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__
 #define RAGNAROK_EVENT_HANDLER select_handler
+#define RAGNAROK_EVENT_MODULE_INIT rag_select_init
 #endif // End of __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__;
 
 #define NO_TIMEOUT 0
@@ -127,6 +130,11 @@ SCM ragnarok_event_handler(SCM listen_socket ,SCM timeout)
   return RAGNAROK_EVENT_HANDLER(listen_socket ,tp);
 }
 
+void init_event_module()
+{
+  RAGNAROK_EVENT_MODULE_INIT();
+}
+  
 #ifdef __cplusplus
 }
 #endif

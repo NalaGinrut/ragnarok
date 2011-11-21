@@ -31,7 +31,6 @@ typedef fd_set scm_rag_fd_set;
 
 extern scm_t_bits scm_rag_fd_set_tag;
 
-
 void rag_select_init();
 
 #endif // __RAG_SELECT_H__;
