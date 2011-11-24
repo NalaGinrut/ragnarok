@@ -112,7 +112,11 @@ SCM scm_mmr_create_this_path(SCM path ,SCM mode)
       m = scm_to_int(mode);
     }
 
+  scm_dynwind_begin(0);
+  
   p = scm_to_locale_string(path);
+  scm_dynwind_free(p);
+  
   len = strlen(p);
   buf = (char*)malloc(len+1); // Don't forget +1 for '\0'
   n = get_path_levels(p ,len);
@@ -129,6 +133,8 @@ SCM scm_mmr_create_this_path(SCM path ,SCM mode)
 
   free(buf);
   buf = NULL;
+
+  scm_dynwind_end();
   
   return ret; 
 }

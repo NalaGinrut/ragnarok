@@ -16,23 +16,25 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RAGNAROK_SELECT_H__
-#define __RAGNAROK_SELECT_H__
+#ifndef __RAGNAROK_EVENT_H__
+#define __RAGNAROK_EVENT_H__
 
-#ifndef __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__
+typedef enum Meta_Event_Type =
+  { READ_FD = 0 ,WRITE_FD ,ERR_MSG,
+  }rag_met;
 
-#define RAGNAROK_EVENT_ADD scm_ragnarok_select_add_event
-#define RAGNAROK_EVENT_DEL scm_ragnarok_select_del_event
-#define RAGNAROK_EVENT_HANDLER scm_ragnarok_select_handler
-#define RAGNAROK_EVENT_MODULE_INIT rag_select_init
+typedef enum Meta_Event_Status =
+  { WAIT = 0 ,BLOCK ,SLEEP ,DEAD,
+  }rag_mes;
 
-typedef fd_set scm_rag_fd_set;
+typedef struct Ragnarok_Meta_Event
+{
+  rag_met type;
+  rag_mes status;
+  void* core;
+}scm_ragnarok_meta_event*;
 
-extern scm_t_bits scm_rag_fd_set_tag;
-
-void rag_select_init();
+extern scm_t_bits ragnarok_meta_event_tag;
 
 
-#endif // __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__;
-
-#endif // __RAGNAROK_SELECT_H__;
+#endif // End of __RAGNAROK_EVENT_H__;

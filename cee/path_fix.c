@@ -137,7 +137,10 @@ SCM scm_mmr_path_fix(SCM target)
   
   SCM_VALIDATE_STRING(1 ,target);
 
+  scm_dynwind_begin(0);
+  
   path = scm_to_locale_string(target);
+  scm_dynwind_free(path);
 
   if(!strstr(path ,"/.."))
     {
@@ -148,9 +151,8 @@ SCM scm_mmr_path_fix(SCM target)
 
   path_len = strlen(path);
   path_len = path_len>MAX_PATH_LEN? MAX_PATH_LEN : path_len;
-  fixed = (char *)calloc(1 ,path_len);
+  fixed = (char *)malloc(path_len+1);
   fixed[0] = '\n'; // sentinal
-
 
   while(get_dir(path ,fixed+1 ,&pi ,&bi))
     {}
@@ -168,6 +170,7 @@ SCM scm_mmr_path_fix(SCM target)
   path = NULL;
 
  end:
+  scm_dynwind_end();
   return ret;
 }
 #undef FUNC_NAME

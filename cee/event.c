@@ -22,117 +22,136 @@
 
 #include <libguile.h>
 #include <malloc.h>
+#include <string.h>
 #include <errno.h>
 
 #ifdef __HAS_SYS_EPOLL_H__
-#define RAGNAROK_EVENT_HANDLER epoll_handler
-#define RAGNAROK_EVENT_MODULE_INIT rag_epoll_init
+#include "rag_epoll.h"
 #endif // End of __HAS_SYS_EPOLL_H__;
 
 #ifdef __HAS_SYS_KQUEUE_H__
-#define RAGNAROK_EVENT_HANDLER kqueue_handler
-#define RAGNAROK_EVENT_MODULE_INIT rag_kqueue_init
+#include "rag_kqueue.h"
 #endif // End of __HAS_SYS_KQUEUE_H__;
 
 #ifndef __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__
-#define RAGNAROK_EVENT_HANDLER select_handler
-#define RAGNAROK_EVENT_MODULE_INIT rag_select_init
+#include "rag_select.h"
 #endif // End of __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__;
-
-#define NO_TIMEOUT 0
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-static inline struct timeval *to_timeval(struct timeval *tp ,long timer)
-{
-  tp->tv_sec = (long) (timer / 1000);
-  tp->tv_usec = (long) ((timer % 1000) * 1000);
+scm_t_bits ragnarok_meta_event_tag;
 
-  return tp;
+static inline SCM scm_rag_meta_event2scm(scm_ragnarok_meta_event* event)
+{
+  SCM_RETURN_NEWSMOB(ragnarok_meta_event_tag ,event);
 }
-  
-#ifdef __HAS_SYS_EPOLL_H__
-#include <sys/epoll.h>
-/* use epoll if has epoll */
-static inline SCM epoll_handler(int listen_socket,
-				struct timeval *tp)
+
+SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
+#define FUNC_NAME "ragnarok-make-meta-event"
 {
+  int t;
+  int s;
+  void* ret = NULL;
   
-}
-#endif // End of __HAS_SYS_EPOLL_H__;
+  SCM_VALIDATE_INUM(1 ,type);
+  SCM_VALIDATE_INUM(2 ,status);
 
-#ifdef __HAS_SYS_KQUEUE_H__
-#include <sys/kqueue.h>
-/* use kqueue if has kqueue */
-static inline SCM kqueue_handler(int listen_socket,
-				 struct timeval *tp)
-{
+  t = scm_to_int(type);
+  s = scm_to_int(status);
 
-}
-#endif // End of __HAS_SYS_KQUEUE_H__;
-
-#ifndef __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__
-/* use select if neither epoll nor kqueue */ 
-#include <sys/select.h>
-/* According to earlier standards */
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include "rag_select.h"
-static inline SCM select_handler(SCM listen_socket,
-				 struct timeval *tp)
-{
-  fd_set read_set ,ready_set;
-  SCM ret = SCM_EOL;
-  SCM ret = SCM_EOL;
-  SCM *prev = ret;
-  int listen_fd = scm_fileno(listen_socket);
-  
-  FD_ZERO(&read_set);
-  FD_SET(listen_fd ,&read_set);
-  
-  ready_set = read_set;
-
-  ready_set = select(listen_fd+1 ,&read_set ,NULL ,NULL ,tp);
-
-  if(FD_ISSET(listen_fd ,&ready_set))
+  switch(type)
     {
-      SCM connect_socket;
-      
-      connect_socket = scm_accept(listen_socket);
-      *prev = scm_cons(connect_socket ,SCM_EOL);
-      prev = SCM_CDRLOC(*prev);
+    READ_FD:
+    WRITE_FD:
+      {
+	int *c = NULL;
+	SCM_VALIDATE_INUM(3 ,core);
+	c = (int*)scm_gc_malloc(sizeof(int) ,"event-fd");
+	*c = scm_to_int(core);
+	break;
+      }
+    ERR_MSG:
+      {
+	char *c = NULL;
+	char *tmp = NULL;
+	SCM_VALIDATE_STRING(3 ,core);
+	tmp = scm_to_locale_string(core);
+	c = (char*)scm_gc_malloc(strlen(tmp)+1);
+      }
+    default:
+      {
+	return SCM_BOOL_F;
+	/* NOTE: Return #f if encounted invalid type.
+	 *       Throw exception in Scheme code ,not in Cee code.
+	 */
+      }
     }
 
-  return ret;
+  ret =
+    (struct Ragnarok_Make_Meta_Event*)
+    scm_gc_malloc(sizeof(struct Ragnarok_Make_Meta_Event) ,"meta-event");
+
+  ret->type = t;
+  ret->status = s;
+  ret->core = (void*)c;
+
+  return scm_rag_meta_event2scm(ret);
 }
-#endif // End of __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__;
- 
-SCM ragnarok_event_handler(SCM listen_socket ,SCM timeout)
+#undef FUNC_NAME
+
+SCM ragnarok_meta_event_p(SCM event)
+#define FUNC_NAME "ragnarok-meta-event?"
 {
-  long to = 0;
-  struct timeval tv ,*tp;
-  
-  if(!SCM_UNBNDP(timeout))
-    {
-      SCM_VALIDATE_INUM(2 ,timeout);
-      to = scm_from_long(timeout);
-    }
-  else
-    {
-      to = NO_TIMEOUT;
-    }
-
-  tp = timeout? to_timeval(&tv ,timeout) : NULL;
-
-  return RAGNAROK_EVENT_HANDLER(listen_socket ,tp);
+  return
+    SCM_SMOB_PREDICATE(ragnarok_meta_event_tag ,event) ?
+    SCM_BOOL_T : SCM_BOOL_F;
 }
+#undef FUNC_NAME
+  
+void init_meta_event_type()
+{
+  ragnarok_meta_event_tag = scm_make_smob_type("ragnarok-meta-event-type",
+					       sizeof(struct Ragnarok_Meta_Event));
+  
+  scm_set_smob_print(ragnarok_meta_event_tag ,ragnarok_print_meta_event);
 
+  scm_c_define_gsubr("ragnarok-clear-event" ,1 ,0 ,0 ,ragnarok_clear_event);
+  scm_c_define_gsubr("ragnarok-make-meta-event" ,3 ,0 ,0 ,ragnarok_make_meta_event);
+  scm_c_define_gsubr("ragnarok-meta-event?" ,1 ,0 ,0 ,ragnarok_meta_event_p);
+}
+  
+SCM scm_ragnarok_event_handler(SCM event ,SCM event_set ,SCM second ,SCM msecond)
+#define FUNC_NAME "ragnarok-event-handler"
+{
+  return RAGNAROK_EVENT_HANDLER(event ,event_set ,second ,msecond);
+}
+#undef FUNC_NAME
+  
+SCM scm_ragnarok_event_add(SCM event ,SCM event_set)
+#define FUNC_NAME "ragnarok-event-add"
+{
+  return RAGNAROK_EVENT_ADD(event ,event_set);
+}
+#undef FUNC_NAME
+
+SCM scm_ragnarok_event_del(SCM event ,SCM event_set)
+#define FUNC_NAME "ragnarok-event-del"
+{
+  return RAGNAROK_EVENT_DEL(event ,event_set);
+}
+#undef FUNC_NAME
+  
 void init_event_module()
 {
   RAGNAROK_EVENT_MODULE_INIT();
+
+  init_meta_event_type();
+  
+  scm_c_define_gsubr("ragnarok-event-handler" ,2 ,2 ,0 ,scm_ragnarok_event_handler);
+  scm_c_define_gsubr("ragnarok-event-add" ,2 ,0 ,0 ,scm_ragnarok_event_add);
+  scm_c_define_gsubr("ragnarok-event-del" ,2 ,0 ,0 ,scm_ragnarok_event_del);
 }
   
 #ifdef __cplusplus

@@ -21,6 +21,7 @@
 #endif
 
 #include <libguile.h>
+#include "event.h"
 
 #ifndef __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__
 /* use select if neither epoll nor kqueue */ 
@@ -44,7 +45,7 @@ scm_t_bits scm_rag_fd_set_tag;
 
 static SCM scm_rag_fd_set2scm(scm_rag_fd_set *fd_set)
 {
-  SCM_RETURN_NEWSMOB(scm_rag_fd_set_tag ,fd_set);
+  return SCM_RETURN_NEWSMOB(scm_rag_fd_set_tag ,fd_set);
 }
 
 static int scm_print_rag_fd_set(SCM fd_set_smob ,SCM port,
@@ -118,7 +119,7 @@ SCM scm_FD_CLR(SCM fd ,SCM set)
   int cfd = scm_from_int(fd);
   fd_set *fset = SMOB_DATA(set);
 
-  FD_CLR(fd ,set);
+  FD_CLR(cfd ,fset);
 
   return SCM_BOOL_T;
 }
@@ -130,7 +131,7 @@ SCM scm_FD_ISSET(SCM fd ,SCM set);
   int cfd = scm_from_int(fd);
   fd_set *fset = SMOB_DATA(set);
 
-  return FD_ISSET(fd ,set) ? SCM_BOOL_T : SCM_BOOL_F;
+  return FD_ISSET(cfd ,fset) ? SCM_BOOL_T : SCM_BOOL_F;
 }
 #undef FUNC_NAME
 
@@ -140,7 +141,7 @@ SCM scm_FD_SET(SCM fd ,SCM set);
   int cfd = scm_from_int(fd);
   fd_set *fset = SMOB_DATA(set);
 
-  FD_SET(fd ,set);
+  FD_SET(cfd ,fset);
 
   return SCM_BOOL_T;
 }
@@ -157,6 +158,38 @@ SCM scm_FD_ZERO(SCM set);
 }
 #undef FUNC_NAME
 
+SCM scm_ragnarok_select_handler(SCM event ,SCM event_set,
+				SCM second ,SCM msecond)
+#define FUNC_NAME "ragnarok-select-handler"
+{
+  
+}
+#undef FUNC_NAME
+
+SCM scm_ragnarok_select_del_event(SCM event ,SCM event_set)
+#define FUNC_NAME "ragnarok-select-del-event"
+{
+  int fd;
+  fd_set *fd_set; // NOTE: we should pass fd_set pointer
+  
+  // TODO: parse event struct ,and get fd&fd_set
+
+  return FD_CLR(fd ,fd_set);
+}
+#undef FUNC_NAME
+
+SCM scm_ragnarok_select_add_event(SCM event ,SCM event_set)
+#define FUNC_NAME "ragnarok-select-add-event"
+{
+  int fd;
+  fd_set *fd_set; // NOTE: we should pass fd_set pointer
+  
+  // TODO: parse event struct ,and get fd&fd_set
+
+  return FD_SET(fd ,fd_set);
+}
+#undef FUNC_NAME
+
 void rag_select_init()
 {
   // fd_set SMOB init
@@ -169,6 +202,12 @@ void rag_select_init()
   scm_c_define_gsubr("FD-ISSET" ,2 ,0 ,0 ,scm_FD_ISSET);
   scm_c_define_gsubr("FD-SET" ,2 ,0 ,0 ,scm_FD_SET);
   scm_c_define_gsubr("FD-ZERO" ,1 ,0 ,0 ,scm_FD_ZERO);
+  scm_c_define_gsubr("ragnarok-select-handler",
+		     2 ,2 ,0 ,scm_ragnarok_select_handler);
+  scm_c_define_gsubr("ragnarok-select-add-event",
+		     2 ,0 ,0 ,scm_ragnarok_select_add_event);
+  scm_c_define_gsubr("ragnarok-select-del-event",
+		     2 ,0 ,0 ,scm_ragnarok_select_del_event);
 }
 
 #ifdef __cplusplus
