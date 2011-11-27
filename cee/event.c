@@ -24,6 +24,8 @@
 #include <malloc.h>
 #include <string.h>
 #include <errno.h>
+#include "event.h"
+#include "rag_struct.h"
 
 #ifdef __HAS_SYS_EPOLL_H__
 #include "rag_epoll.h"
@@ -109,7 +111,16 @@ SCM ragnarok_meta_event_p(SCM event)
     SCM_BOOL_T : SCM_BOOL_F;
 }
 #undef FUNC_NAME
-  
+
+SCM_RAG_OBJ_GETTER(mevent ,type ,type ,scm_to_int);
+SCM_RAG_OBJ_SETTER(mevent ,type ,type ,scm_from_int ,scm_to_int);
+
+SCM_RAG_OBJ_GETTER(mevent ,status ,status ,scm_to_int);
+SCM_RAG_OBJ_SETTER(mevent ,status ,status ,scm_from_int ,scm_to_int);
+
+SCM_RAG_OBJ_GETTER(mevent ,core ,core ,PTR2SCM);
+SCM_RAG_OBJ_SETTER(mevent ,core ,core ,PTR2SCM ,SCM2PTR);
+
 void init_meta_event_type()
 {
   ragnarok_meta_event_tag = scm_make_smob_type("ragnarok-meta-event-type",
@@ -120,6 +131,15 @@ void init_meta_event_type()
   scm_c_define_gsubr("ragnarok-clear-event" ,1 ,0 ,0 ,ragnarok_clear_event);
   scm_c_define_gsubr("ragnarok-make-meta-event" ,3 ,0 ,0 ,ragnarok_make_meta_event);
   scm_c_define_gsubr("ragnarok-meta-event?" ,1 ,0 ,0 ,ragnarok_meta_event_p);
+
+  SCM_MAKE_GSUBR_OBJ_GET(mevent ,type);
+  SCM_MAKE_GSUBR_OBJ_SET(mevent ,type);
+  
+  SCM_MAKE_GSUBR_OBJ_GET(mevent ,status);
+  SCM_MAKE_GSUBR_OBJ_SET(mevent ,status);
+
+  SCM_MAKE_GSUBR_OBJ_GET(mevent ,core);
+  SCM_MAKE_GSUBR_OBJ_SET(mevent ,core);
 }
   
 SCM scm_ragnarok_event_handler(SCM event ,SCM event_set ,SCM second ,SCM msecond)

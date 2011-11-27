@@ -20,18 +20,19 @@
 #  include <config.h>
 #endif
 
+#ifndef __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__
+
 #include <libguile.h>
 #include "event.h"
+#include "rag_struct.h"
+#include "rag_select.h"
 
-#ifndef __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__
 /* use select if neither epoll nor kqueue */ 
 #include <sys/select.h>
 /* According to earlier standards */
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "rag_select.h"
-#include "rag_struct.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,7 +42,6 @@ scm_t_bits scm_rag_fd_set_tag;
 
 #define SCM_ASSERT_FD_SET(x) \  
   scm_assert_smob_type(scm_rag_fd_set_tag ,(x))
-
 
 static SCM scm_rag_fd_set2scm(scm_rag_fd_set *fd_set)
 {
@@ -190,6 +190,15 @@ SCM scm_ragnarok_select_add_event(SCM event ,SCM event_set)
 }
 #undef FUNC_NAME
 
+SCM_RAG_OBJ_GETTER(mevent ,type ,type ,scm_from_int);
+SCM_RAG_OBJ_SETTER(mevent ,type ,type ,scm_from_int ,scm_to_int)
+
+SCM_RAG_OBJ_GETTER(mevent ,status ,status ,scm_from_int);
+SCM_RAG_OBJ_SETTER(mevent ,status ,status ,scm_from_int ,scm_to_int)
+
+SCM_RAG_OBJ_GETTER(mevent ,core ,core ,rag_scm_from_pointer);
+SCM_RAG_OBJ_SETTER(mevent ,core ,core ,PTR2SCM ,SCM2PTR)
+  
 void rag_select_init()
 {
   // fd_set SMOB init
