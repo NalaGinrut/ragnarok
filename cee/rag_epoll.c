@@ -20,43 +20,47 @@
 #  include <config.h>
 #endif
 
+#ifdef __HAS_SYS_EPOLL_H__
+
 #include <libguile.h>
-#include <unistd.h>
+#include "event.h"
+#include "rag_struct.h"
+#include "rag_epoll.h"
+#include "lib_main.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-SCM scm_mmr_sleep(SCM second ,SCM msecond)
-#define FUNC_NAME "ragnarok-sleep"
+SCM scm_ragnarok_epoll_add_event(SCM event ,SCM event_set)
 {
-  long s = 0L;
-  long ms = 0L;
-
-  SCM_VALIDATE_INT(1 ,second);
-
-  s = scm_to_long(second);
   
-  if(!SCM_UNBNDP(msecond))
-    {
-      SCM_VALIDATE_INT(2 ,msecond);
-      ms = scm_to_long(msecond);
-    }
-    
-  if(s)
-    {
-      sleep(s);
-    }
-
-  if(ms)
-    {
-      usleep(ms);
-    }
-
-  return SCM_BOOL_T;
 }
-#undef FUNC_NAME
+  
+SCM scm_ragnarok_epoll_del_event(SCM event ,SCM event_set)
+{
+  
+}
+  
+SCM scm_ragnarok_epoll_handler(SCM event ,SCM event_set ,SCM second ,SCM msecond)
+{
+  
+}
+
+void rag_ragnarok_epoll_init()
+{
+  scm_c_define_gsubr("ragnarok-epoll-handler",
+		     2 ,2 ,0 ,scm_ragnarok_epoll_handler);
+  scm_c_define_gsubr("ragnarok-epoll-add-event",
+		     2 ,0 ,0 ,scm_ragnarok_epoll_add_event);
+  scm_c_define_gsubr("ragnarok-epoll-del-event",
+		     2 ,0 ,0 ,scm_ragnarok_epoll_del_event);
+}
+
 
 #ifdef __cplusplus
 }
 #endif
+
+#endif // End of __HAS_SYS_EPOLL_H__;
+

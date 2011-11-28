@@ -19,7 +19,15 @@
 #ifndef __RAGNAROK_SELECT_H__
 #define __RAGNAROK_SELECT_H__
 
-#ifndef __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__
+#ifndef __HAS_SYS_EPOLL_H__
+#ifndef __HAS_SYS_KQUEUE_H__
+
+/* use select if neither epoll nor kqueue */ 
+#include <sys/select.h>
+/* According to earlier standards */
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #define RAGNAROK_EVENT_ADD scm_ragnarok_select_add_event
 #define RAGNAROK_EVENT_DEL scm_ragnarok_select_del_event
@@ -33,6 +41,7 @@ extern scm_t_bits scm_rag_fd_set_tag;
 void rag_select_init();
 
 
-#endif // __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__;
+#endif // End of no __HAS_SYS_KQUEUE_H__;
+#endif // End of no __HAS_SYS_EPOLL_H__;
 
 #endif // __RAGNAROK_SELECT_H__;

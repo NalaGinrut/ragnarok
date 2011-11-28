@@ -21,13 +21,12 @@
 
 #ifdef __HAS_SYS_EPOLL_H__
 
-#define RAGNAROK_EVENT_ADD ragnarok_epoll_add_event
+#include <sys/epoll.h>
+
+#define RAGNAROK_EVENT_ADD scm_ragnarok_epoll_add_event
 #define RAGNAROK_EVENT_DEL scm_ragnarok_select_del_event
-#define RAGNAROK_EVENT_HANDLER ragnarok_epoll_handler
+#define RAGNAROK_EVENT_HANDLER scm_ragnarok_epoll_handler
 #define RAGNAROK_EVENT_MODULE_INIT rag_ragnarok_epoll_init
-
-
-
 
 #endif // End of __HAS_SYS_EPOLL_H__;
 

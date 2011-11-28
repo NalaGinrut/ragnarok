@@ -26,7 +26,7 @@ SCM scm_mmr_create_this_path(SCM path ,SCM mode);
 SCM scm_mmr_waitpid(SCM pid ,SCM options);
 SCM scm_mmr_fork();
 SCM scm_mmr_gcrypt_mda(SCM ori_str ,SCM algo);
-SCM scm_mmr-sleep(SCM second ,SCM msecond);
+SCM scm_mmr_sleep(SCM second ,SCM msecond);
 
 // modules
 void init_event_module();

@@ -1,10 +1,11 @@
-CFLAGS := @GUILE_CFLAGS@ -fPIC -MD 
+TOP := $(shell pwd)
+INCLUDES := -I$(TOP)
+CFLAGS := @GUILE_CFLAGS@ -fPIC -MD -DHAVE_CONFIG_H $(INCLUDES)
 LIBS := @GUILE_LIBS@ -shared
 LDFLAGS := @GUILE_LDFLAGS@ -fPIC -shared
 CC := @CC@
 OBJ := obj
 CEE := cee
-TOP := $(shell pwd)
 MOD := ragnarok
 MOD_OBJ := $(OBJ)/ragnarok
 BIN_OBJ := $(OBJ)/bin

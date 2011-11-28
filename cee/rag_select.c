@@ -20,7 +20,7 @@
 #  include <config.h>
 #endif
 
-#ifndef __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__
+#if defined(__HAS_SYS_EPOLL_H__) && defined(__HAS_SYS_KQUEUE_H__)
 
 #include <libguile.h>
 #include "event.h"
@@ -28,21 +28,13 @@
 #include "rag_select.h"
 #include "lib_main.h"
 
-/* use select if neither epoll nor kqueue */ 
-#include <sys/select.h>
-/* According to earlier standards */
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 scm_t_bits scm_rag_fd_set_tag;
 
-#define SCM_ASSERT_FD_SET(x) \  
-  scm_assert_smob_type(scm_rag_fd_set_tag ,(x))
+#define SCM_ASSERT_FD_SET(x) scm_assert_smob_type(scm_rag_fd_set_tag ,(x))
 
 static SCM scm_rag_fd_set2scm(scm_rag_fd_set *fd_set)
 {
@@ -197,23 +189,25 @@ SCM scm_ragnarok_select_handler(SCM event ,SCM fd_set,
 
   switch(me->status)
     {	
-    WAIT:
+    case WAIT:
       // OK ,do we really need this???
-    BLOCK:
+    case BLOCK:
       {
 	// TODO: BLOCK
       }
-    SLEEP:
+    case SLEEP:
       return scm_mmr_sleep(second ,msecond);
       break;
-    DEAD:
+    case DEAD:
       // delete event from event_set if DEAD
       fd_set *fset = SCM_SMOB_DATA(event_set);
       return fd_clr(fd ,fset);
       break;
-    READY:
+    case READY:
       return scm_rag_select(scm_from_int(fd) ,fd_set ,second ,msecond);
       break;
+    case CLEAR:
+      // TODO: CLEAR
     default:
       /* NOTE: Never do err handler in Cee code.
        *       Just return #f and handle it in Guile code.

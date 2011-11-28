@@ -43,7 +43,7 @@
                 scm_rag_##obj *obj; \
                 scm_assert_smob_type(rag_##obj##_tag,smob); \
                 obj = (scm_rag_##obj *)SCM_SMOB_DATA( smob ); \
-                return (c_scm(obj->cm )); \
+                return (c_scm( obj->cm )); \
         }
 #define SCM_RAG_OBJ_SETTER( obj, cm, gm, c_scm, scm_c ) \
         SCM_DEFINE( scm_rag_##obj##_set_##cm, "rag-" #obj ":" #gm "-set!", \

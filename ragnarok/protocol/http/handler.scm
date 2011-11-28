@@ -144,7 +144,7 @@
 	  
 	  ;; return Forbidden page
 	  (http-error-page-serv-handler logger *Forbidden*)
-	  )))))
+	  ))))
 ;;-------method handler end-----------------
 
 (define generate-etag

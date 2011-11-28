@@ -2,3 +2,7 @@
 
 * POST method: redirect conn-socket to current-input-port and read ,will cause crash
   because it countered <eof>.
+
+* Version number delayed each commit. Because version info is relative to git info.
+  We should make sure that the user run ./autogen.sh each time they compile. 
+  Can we make it automatically to avoid handling it by users?

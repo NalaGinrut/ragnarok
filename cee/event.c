@@ -35,19 +35,31 @@
 #include "rag_kqueue.h"
 #endif // End of __HAS_SYS_KQUEUE_H__;
 
-#ifndef __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__
+#ifndef __HAS_SYS_EPOLL_H__
+#ifndef __HAS_SYS_KQUEUE_H__
 #include "rag_select.h"
-#endif // End of __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__;
+#endif // End of no __HAS_SYS_KQUEUE_H__;
+#endif // End of no __HAS_SYS_EPOLL_H__;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-scm_t_bits ragnarok_meta_event_tag;
+scm_t_bits rag_mevent_tag;
 
-static inline SCM scm_rag_meta_event2scm(scm_ragnarok_meta_event* event)
+const char const *ragnarok_meta_type_string[] =
+  {
+    "READ_FD" ,"WRITE_FD" ,"ERR_MSG" ,"UNKNOWN"
+  };
+
+const char const *ragnarok_meta_status_string[] =
+  {
+    "WAIT" ,"BLOCK" ,"SLEEP" ,"DEAD" ,"READY" ,"CLEAR"
+  };
+  
+static inline SCM scm_rag_meta_event2scm(ragnarok_meta_event event)
 {
-  SCM_RETURN_NEWSMOB(ragnarok_meta_event_tag ,event);
+  SCM_RETURN_NEWSMOB(rag_mevent_tag ,event);
 }
 
 SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
@@ -55,45 +67,36 @@ SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
 {
   int t;
   int s;
-  void* ret = NULL;
+  void *c = NULL;
+  ragnarok_meta_event ret = NULL;
   
-  SCM_VALIDATE_INUM(1 ,type);
-  SCM_VALIDATE_INUM(2 ,status);
+  SCM_VALIDATE_INT(1 ,type);
+  SCM_VALIDATE_INT(2 ,status);
 
   t = scm_to_int(type);
   s = scm_to_int(status);
 
-  switch(type)
+  switch(t)
     {
-    READ_FD:
-    WRITE_FD:
-      {
-	int *c = NULL;
-	SCM_VALIDATE_INUM(3 ,core);
-	c = (int*)scm_gc_malloc(sizeof(int) ,"event-fd");
-	*c = scm_to_int(core);
-	break;
-      }
-    ERR_MSG:
-      {
-	char *c = NULL;
-	char *tmp = NULL;
-	SCM_VALIDATE_STRING(3 ,core);
-	tmp = scm_to_locale_string(core);
-	c = (char*)scm_gc_malloc(strlen(tmp)+1);
-      }
+    case READ_FD:
+    case WRITE_FD:
+      SCM_VALIDATE_INT(3 ,core);
+      c = (int*)scm_gc_malloc(sizeof(int) ,"event-fd");
+      *(int*)c = scm_to_int(core);
+      break;
+    case ERR_MSG:
+      SCM_VALIDATE_STRING(3 ,core);
+      c = scm_to_locale_string(core);
+      break;
     default:
-      {
-	return SCM_BOOL_F;
+      return SCM_BOOL_F;
 	/* NOTE: Return #f if encounted invalid type.
 	 *       Throw exception in Scheme code ,not in Cee code.
 	 */
-      }
     }
 
-  ret =
-    (struct Ragnarok_Make_Meta_Event*)
-    scm_gc_malloc(sizeof(struct Ragnarok_Make_Meta_Event) ,"meta-event");
+  ret = (struct Ragnarok_Meta_Event*)
+    scm_gc_malloc(sizeof(struct Ragnarok_Meta_Event) ,"meta-event");
 
   ret->type = t;
   ret->status = s;
@@ -107,15 +110,60 @@ SCM ragnarok_meta_event_p(SCM event)
 #define FUNC_NAME "ragnarok-meta-event?"
 {
   return
-    SCM_SMOB_PREDICATE(ragnarok_meta_event_tag ,event) ?
+    SCM_SMOB_PREDICATE(rag_mevent_tag ,event) ?
     SCM_BOOL_T : SCM_BOOL_F;
 }
 #undef FUNC_NAME
 
-SCM_RAG_OBJ_GETTER(mevent ,type ,type ,scm_to_int);
+int ragnarok_print_meta_event(SCM me_smob ,SCM port ,scm_print_state *pstate)
+{
+  ragnarok_meta_event me = (ragnarok_meta_event)SCM_SMOB_DATA(me_smob);
+
+  scm_puts("#<rag-meta-event 0x" ,port);
+  scm_intprint((long)me ,16 ,port);
+  scm_puts(" -" ,port);
+
+  scm_puts(" type: " ,port);
+  scm_puts(RAG_ME_GET_TYPE(me) ,port);
+
+  scm_puts(" status: " ,port);
+  scm_puts(RAG_ME_GET_STATUS(me) ,port);
+
+  scm_puts(" core: " ,port);
+  RAG_ME_PRN_CORE(me ,port);
+	   
+  scm_puts(">" ,port);
+
+  return 1;
+}
+
+SCM ragnarok_clear_meta_event(SCM me_smob)
+#define FUNC_NAME "ragnarok-clear-meta-event"
+{
+  ragnarok_meta_event me = (ragnarok_meta_event)SCM_SMOB_DATA(me_smob);
+
+  me->type = UNKNOWN;
+  me->status = CLEAR;
+  me->core = NULL;
+
+  return scm_rag_meta_event2scm(me);
+}
+#undef FUNC_NAME
+  
+scm_sizet ragnarok_free_meta_event(SCM me_smob)
+{
+  ragnarok_meta_event me = (ragnarok_meta_event)SCM_SMOB_DATA(me_smob);
+
+  // NOTE: The second para 'size' is always ignored in Guile 2.x.
+  scm_gc_free(me ,0 ,"meta-event");
+
+  return 0;	
+}
+
+SCM_RAG_OBJ_GETTER(mevent ,type ,type ,scm_from_int);
 SCM_RAG_OBJ_SETTER(mevent ,type ,type ,scm_from_int ,scm_to_int);
 
-SCM_RAG_OBJ_GETTER(mevent ,status ,status ,scm_to_int);
+SCM_RAG_OBJ_GETTER(mevent ,status ,status ,scm_from_int);
 SCM_RAG_OBJ_SETTER(mevent ,status ,status ,scm_from_int ,scm_to_int);
 
 SCM_RAG_OBJ_GETTER(mevent ,core ,core ,PTR2SCM);
@@ -123,12 +171,14 @@ SCM_RAG_OBJ_SETTER(mevent ,core ,core ,PTR2SCM ,SCM2PTR);
 
 void init_meta_event_type()
 {
-  ragnarok_meta_event_tag = scm_make_smob_type("ragnarok-meta-event-type",
-					       sizeof(struct Ragnarok_Meta_Event));
-  
-  scm_set_smob_print(ragnarok_meta_event_tag ,ragnarok_print_meta_event);
+  // meta event SMOB functions define
+  rag_mevent_tag = scm_make_smob_type("ragnarok-meta-event-type",
+				      sizeof(struct Ragnarok_Meta_Event));
+  scm_set_smob_print(rag_mevent_tag ,ragnarok_print_meta_event);
+  scm_set_smob_free(rag_mevent_tag ,ragnarok_free_meta_event);
 
-  scm_c_define_gsubr("ragnarok-clear-event" ,1 ,0 ,0 ,ragnarok_clear_event);
+  // meta event handler define
+  scm_c_define_gsubr("ragnarok-clear-meta-event" ,1 ,0 ,0 ,ragnarok_clear_meta_event);
   scm_c_define_gsubr("ragnarok-make-meta-event" ,3 ,0 ,0 ,ragnarok_make_meta_event);
   scm_c_define_gsubr("ragnarok-meta-event?" ,1 ,0 ,0 ,ragnarok_meta_event_p);
 
