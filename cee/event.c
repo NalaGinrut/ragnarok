@@ -145,6 +145,11 @@ void init_meta_event_type()
 SCM scm_ragnarok_event_handler(SCM event ,SCM event_set ,SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-event-handler"
 {
+  /* NOTE: timeval is variable while type is different.
+   *  SLEEP -> delay time;
+   *  READY -> timeout;
+   *  BLOCK -> timeout;
+   */
   return RAGNAROK_EVENT_HANDLER(event ,event_set ,second ,msecond);
 }
 #undef FUNC_NAME

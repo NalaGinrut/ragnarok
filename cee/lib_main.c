@@ -31,8 +31,9 @@ void init_lib()
   scm_c_define_gsubr("create-this-path" ,1 ,1 ,0 ,scm_mmr_create_this_path);
   scm_c_define_gsubr("ragnarok-waitpid" ,1 ,1 ,0 ,scm_mmr_waitpid);
   scm_c_define_gsubr("ragnarok-fork" ,0 ,0 ,0 ,scm_mmr_fork);
-  scm_c_define_gsubr("gcrypt:mda", 2, 0, 0, scm_mmr_gcrypt_mda);
-
+  scm_c_define_gsubr("gcrypt:mda" ,2 ,0 ,0 ,scm_mmr_gcrypt_mda);
+  scm_c_define_gsubr("ragnarok-sleep" ,1 ,1 ,0 ,scm_mmr_sleep);
+  
   // init modules
   init_event_module();
 }

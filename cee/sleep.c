@@ -16,29 +16,47 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RAGNAROK_EVENT_H__
-#define __RAGNAROK_EVENT_H__
+#ifdef HAVE_CONFIG_H
+#  include <config.h>
+#endif
 
-typedef enum Meta_Event_Type =
-  { READ_FD = 0 ,WRITE_FD ,ERR_MSG,
-  }rag_met;
+#include <libguile.h>
+#include <unistd.h>
 
-typedef enum Meta_Event_Status =
-  { WAIT = 0 ,BLOCK ,SLEEP ,DEAD ,READY,
-  }rag_mes;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-typedef struct Ragnarok_Meta_Event
+SCM scm_mmr_sleep(SCM second ,SCM msecond)
+#define FUNC_NAME "ragnarok-sleep"
 {
-  rag_met type;
-  rag_mes status;
-  void* core;
-}scm_ragnarok_meta_event*;
+  long second = 0L;
+  long msecond = 0L;
 
-extern scm_t_bits ragnarok_meta_event_tag;
+  SCM_VALIDATE_INUM(1 ,second);
 
-#define SCM_ASSERT_META_EVENT(x) \
-  scm_assert_smob_type(ragnarok_meta_event_tag ,x)
+  s = scm_to_long(second);
+  
+  if(!SCM_UNBNDP(msecond))
+    {
+      SCM_VALIDATE_INUM(2 ,msecond);
+      ms = scm_to_long(msecond);
+    }
+    
+  if(s)
+    {
+      second(s);
+    }
 
-#define RAG_GET_FD_CORE(mevent) (*(int*)((mevent)->core))
+  if(ms)
+    {
+      usecond(ms);
+    }
 
-#endif // End of __RAGNAROK_EVENT_H__;
+  return SCM_BOOL_T;
+}
+#undef FUNC_NAME
+
+#ifdef __cplusplus
+}
+#endif

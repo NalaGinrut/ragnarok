@@ -26,6 +26,7 @@
 #include "event.h"
 #include "rag_struct.h"
 #include "rag_select.h"
+#include "lib_main.h"
 
 /* use select if neither epoll nor kqueue */ 
 #include <sys/select.h>
@@ -116,8 +117,14 @@ SCM scm_rag_select(SCM nfds ,SCM readfds ,SCM writefds,
 SCM scm_FD_CLR(SCM fd ,SCM set)
 #define FUNC_NAME "FD-CLR"
 {
-  int cfd = scm_from_int(fd);
-  fd_set *fset = SMOB_DATA(set);
+  int cfd = 0;
+  fd_set *fset = NULL;
+
+  SCM_ASSERT_FD_SET(set);
+  SCM_VALIDATE_INUM(1 ,fd);
+
+  cfd = scm_from_int(fd);
+  fset = SMOB_DATA(set);
 
   FD_CLR(cfd ,fset);
 
@@ -128,9 +135,15 @@ SCM scm_FD_CLR(SCM fd ,SCM set)
 SCM scm_FD_ISSET(SCM fd ,SCM set);
 #define FUNC_NAME "FD-ISSET"
 {
-  int cfd = scm_from_int(fd);
-  fd_set *fset = SMOB_DATA(set);
+  int cfd = 0;
+  fd_set *fset = NULL;
 
+  SCM_ASSERT_FD_SET(set);
+  SCM_VALIDATE_INUM(1 ,fd);
+
+  cfd = scm_from_int(fd);
+  fset = SMOB_DATA(set);
+    
   return FD_ISSET(cfd ,fset) ? SCM_BOOL_T : SCM_BOOL_F;
 }
 #undef FUNC_NAME
@@ -138,8 +151,14 @@ SCM scm_FD_ISSET(SCM fd ,SCM set);
 SCM scm_FD_SET(SCM fd ,SCM set);
 #define FUNC_NAME "FD-SET"
 {
-  int cfd = scm_from_int(fd);
-  fd_set *fset = SMOB_DATA(set);
+  int cfd = 0;
+  fd_set *fset = NULL;
+
+  SCM_ASSERT_FD_SET(set);
+  SCM_VALIDATE_INUM(1 ,fd);
+
+  cfd = scm_from_int(fd);
+  fset = SMOB_DATA(set);
 
   FD_SET(cfd ,fset);
 
@@ -150,7 +169,11 @@ SCM scm_FD_SET(SCM fd ,SCM set);
 SCM scm_FD_ZERO(SCM set);
 #define FUNC_NAME "FD-ZERO"
 {
-  fd_set *fset = SMOB_DATA(set);
+  fd_set *fset = NULL;
+
+  SCM_ASSERT_FD_SET(set);
+  
+  fset = SMOB_DATA(set);
 
   FD_ZERO(set);
 
@@ -158,15 +181,54 @@ SCM scm_FD_ZERO(SCM set);
 }
 #undef FUNC_NAME
 
-SCM scm_ragnarok_select_handler(SCM event ,SCM event_set,
+SCM scm_ragnarok_select_handler(SCM event ,SCM fd_set,
 				SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-select-handler"
 {
+  scm_ragnarok_meta_event me = NULL;
+  SCM fd;
   
+  SCM_ASSERT_META_EVENT(event);
+
+  me = SCM_SMOB_DATA(event);
+  fd = RAG_GET_FD_CORE(me);
+  /* FIXME: How can I handle other type?
+   */
+
+  switch(me->status)
+    {	
+    WAIT:
+      // OK ,do we really need this???
+    BLOCK:
+      {
+	// TODO: BLOCK
+      }
+    SLEEP:
+      return scm_mmr_sleep(second ,msecond);
+      break;
+    DEAD:
+      // delete event from event_set if DEAD
+      fd_set *fset = SCM_SMOB_DATA(event_set);
+      return fd_clr(fd ,fset);
+      break;
+    READY:
+      return scm_rag_select(scm_from_int(fd) ,fd_set ,second ,msecond);
+      break;
+    default:
+      /* NOTE: Never do err handler in Cee code.
+       *       Just return #f and handle it in Guile code.
+       */
+      goto err;
+    }
+  
+  // Must not be here!
+  // FIXME: I need a error handler.
+ err:
+  return SCM_BOOL_F;
 }
 #undef FUNC_NAME
 
-SCM scm_ragnarok_select_del_event(SCM event ,SCM event_set)
+SCM scm_ragnarok_select_del_event(SCM event ,SCM fd_set)
 #define FUNC_NAME "ragnarok-select-del-event"
 {
   int fd;
@@ -178,7 +240,7 @@ SCM scm_ragnarok_select_del_event(SCM event ,SCM event_set)
 }
 #undef FUNC_NAME
 
-SCM scm_ragnarok_select_add_event(SCM event ,SCM event_set)
+SCM scm_ragnarok_select_add_event(SCM event ,SCM fd_set)
 #define FUNC_NAME "ragnarok-select-add-event"
 {
   int fd;
