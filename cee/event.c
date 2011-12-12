@@ -217,7 +217,7 @@ SCM scm_ragnarok_event_del(SCM event ,SCM event_set)
   return RAGNAROK_EVENT_DEL(event ,event_set);
 }
 #undef FUNC_NAME
-  
+
 void init_event_module()
 {
   RAGNAROK_EVENT_MODULE_INIT();

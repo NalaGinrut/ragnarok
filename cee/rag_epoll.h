@@ -28,6 +28,21 @@
 #define RAGNAROK_EVENT_HANDLER scm_ragnarok_epoll_handler
 #define RAGNAROK_EVENT_MODULE_INIT rag_ragnarok_epoll_init
 
+typedef struct Ragnarok_Epoll_Event_Set
+{
+  unsigned int count;
+  unsigned int size;
+  struct epoll_event *set[];
+}scm_rag_epoll_event_set;
+  
+typedef (struct epoll_event scm_rag_epoll_event);
+typedef (struct epoll_event scm_epoll_event_set[]);
+
+extern scm_t_bits scm_rag_epoll_event_tag;
+extern scm_t_bits scm_rag_epoll_event_set_tag;
+
+#define RAG_EPOLL_GET(es ,elem ,type)  (*((type)*)(es)->(elem))
+
 #endif // End of __HAS_SYS_EPOLL_H__;
 
 #endif // End of __RAGNAROK_EPOLL_H__;

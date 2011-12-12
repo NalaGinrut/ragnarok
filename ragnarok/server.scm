@@ -115,7 +115,11 @@
 	 [s (server:listen-port self server-port)]
 	 [request-handler (server:handler self)]
 	 [logger (server:logger self)]
-	 	 )
+	 )
+
+    ;; set listen-port to non-block
+    (set-port-non-block! s)
+
     ;; response loop
     (let active-loop ()
       (if (not (port-closed? s))

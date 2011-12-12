@@ -62,8 +62,8 @@ SCM scm_make_fd_set()
 }
 #undef FUNC_NAME
   
-SCM scm_rag_select(SCM nfds ,SCM readfds ,SCM writefds,
-		   SCM exceptfds ,SCM second ,SCM usecond)
+SCM scm_ragnarok_select(SCM nfds ,SCM readfds ,SCM writefds,
+		   SCM exceptfds ,SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-select"
 {
   int n = 0;
@@ -72,7 +72,7 @@ SCM scm_rag_select(SCM nfds ,SCM readfds ,SCM writefds,
   scm_rag_fd_set *efd = NULL;
   scm_rag_fd_set *ready_set = NULL;
   long s = 0L;
-  long us = 0L;
+  long ms = 0L;
   struct timeval tv;
 
   SCM_VALIDATE_INUM(1 ,nfds);
@@ -85,10 +85,10 @@ SCM scm_rag_select(SCM nfds ,SCM readfds ,SCM writefds,
       SCM_VALIDATE_INUM(5 ,second);
       s = (long)scm_from_long(second);
 
-      if(!SCM_UNBNDP(usecond))
+      if(!SCM_UNBNDP(msecond))
 	{
-	  SCM_VALIDATE_INUM(6 ,usecond);
-	  ns = (long)scm_from_long(usecond);
+	  SCM_VALIDATE_INUM(6 ,msecond);
+	  ms = (long)scm_from_long(msecond);
 	}
     }
 
@@ -116,7 +116,7 @@ SCM scm_FD_CLR(SCM fd ,SCM set)
   SCM_VALIDATE_INUM(1 ,fd);
 
   cfd = scm_from_int(fd);
-  fset = SMOB_DATA(set);
+  fset = (fd_set*)SMOB_DATA(set);
 
   FD_CLR(cfd ,fset);
 
@@ -134,7 +134,7 @@ SCM scm_FD_ISSET(SCM fd ,SCM set);
   SCM_VALIDATE_INUM(1 ,fd);
 
   cfd = scm_from_int(fd);
-  fset = SMOB_DATA(set);
+  fset = (fd_set*)SMOB_DATA(set);
     
   return FD_ISSET(cfd ,fset) ? SCM_BOOL_T : SCM_BOOL_F;
 }
@@ -150,7 +150,7 @@ SCM scm_FD_SET(SCM fd ,SCM set);
   SCM_VALIDATE_INUM(1 ,fd);
 
   cfd = scm_from_int(fd);
-  fset = SMOB_DATA(set);
+  fset = (fd_set*)SMOB_DATA(set);
 
   FD_SET(cfd ,fset);
 
@@ -165,7 +165,7 @@ SCM scm_FD_ZERO(SCM set);
 
   SCM_ASSERT_FD_SET(set);
   
-  fset = SMOB_DATA(set);
+  fset = (fd_set*)SMOB_DATA(set);
 
   FD_ZERO(set);
 
@@ -177,12 +177,12 @@ SCM scm_ragnarok_select_handler(SCM event ,SCM fd_set,
 				SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-select-handler"
 {
-  scm_ragnarok_meta_event me = NULL;
+  scm_rag_mevent *me = NULL;
   SCM fd;
   
   SCM_ASSERT_META_EVENT(event);
 
-  me = SCM_SMOB_DATA(event);
+  me = (scm_rag_mevent*)SCM_SMOB_DATA(event);
   fd = RAG_GET_FD_CORE(me);
   /* FIXME: How can I handle other type?
    */
@@ -192,9 +192,7 @@ SCM scm_ragnarok_select_handler(SCM event ,SCM fd_set,
     case WAIT:
       // OK ,do we really need this???
     case BLOCK:
-      {
-	// TODO: BLOCK
-      }
+      // TODO: BLOCK
     case SLEEP:
       return scm_mmr_sleep(second ,msecond);
       break;
@@ -204,7 +202,7 @@ SCM scm_ragnarok_select_handler(SCM event ,SCM fd_set,
       return fd_clr(fd ,fset);
       break;
     case READY:
-      return scm_rag_select(scm_from_int(fd) ,fd_set ,second ,msecond);
+      return scm_ragnarok_select(scm_from_int(fd) ,fd_set ,second ,msecond);
       break;
     case CLEAR:
       // TODO: CLEAR
@@ -226,11 +224,19 @@ SCM scm_ragnarok_select_del_event(SCM event ,SCM fd_set)
 #define FUNC_NAME "ragnarok-select-del-event"
 {
   int fd;
-  fd_set *fd_set; // NOTE: we should pass fd_set pointer
+  fd_set *fset = NULL;
+  scm_rag_mevent *me = NULL;
   
-  // TODO: parse event struct ,and get fd&fd_set
+  SCM_ASSERT_META_EVENT(event);
+  SCM_ASSERT_FD_SET(fd_set);
 
-  return FD_CLR(fd ,fd_set);
+  me = (scm_rag_mevent*)SCM_SMOB_DATA(event);
+  fd = RAG_GET_FD_CORE(me);
+  fset = (fd_set*)SMOB_DATA(fd_set);
+
+  FD_CLR(fd ,fset);
+
+  return SCM_BOOL_T;
 }
 #undef FUNC_NAME
 
@@ -238,22 +244,30 @@ SCM scm_ragnarok_select_add_event(SCM event ,SCM fd_set)
 #define FUNC_NAME "ragnarok-select-add-event"
 {
   int fd;
-  fd_set *fd_set; // NOTE: we should pass fd_set pointer
+  fd_set *fset = NULL;
+  scm_rag_mevent *me = NULL;
   
-  // TODO: parse event struct ,and get fd&fd_set
+  SCM_ASSERT_META_EVENT(event);
+  SCM_ASSERT_FD_SET(fd_set);
 
-  return FD_SET(fd ,fd_set);
+  me = (scm_rag_mevent*)SCM_SMOB_DATA(event);
+  fd = RAG_GET_FD_CORE(me);
+  fset = (fd_set*)SMOB_DATA(fd_set);
+
+  FD_SET(fd ,fset);
+
+  return SCM_BOOL_T;
 }
 #undef FUNC_NAME
 
 SCM_RAG_OBJ_GETTER(mevent ,type ,type ,scm_from_int);
-SCM_RAG_OBJ_SETTER(mevent ,type ,type ,scm_from_int ,scm_to_int)
+SCM_RAG_OBJ_SETTER(mevent ,type ,type ,scm_from_int ,scm_to_int);
 
 SCM_RAG_OBJ_GETTER(mevent ,status ,status ,scm_from_int);
-SCM_RAG_OBJ_SETTER(mevent ,status ,status ,scm_from_int ,scm_to_int)
+SCM_RAG_OBJ_SETTER(mevent ,status ,status ,scm_from_int ,scm_to_int);
 
 SCM_RAG_OBJ_GETTER(mevent ,core ,core ,rag_scm_from_pointer);
-SCM_RAG_OBJ_SETTER(mevent ,core ,core ,PTR2SCM ,SCM2PTR)
+SCM_RAG_OBJ_SETTER(mevent ,core ,core ,PTR2SCM ,SCM2PTR);
   
 void rag_select_init()
 {
@@ -262,7 +276,7 @@ void rag_select_init()
 
   // procedure init
   scm_c_define_gsubr("make-fd-set" ,0 ,0 ,0 ,scm_make_fd_set);
-  scm_c_define_gsubr("ragnarok-select" ,4 ,2 ,0 ,scm_rag_select);
+  scm_c_define_gsubr("ragnarok-select" ,4 ,2 ,0 ,scm_ragnarok_select);
   scm_c_define_gsubr("FD-CLR" ,2 ,0 ,0 ,scm_FD_CLR);
   scm_c_define_gsubr("FD-ISSET" ,2 ,0 ,0 ,scm_FD_ISSET);
   scm_c_define_gsubr("FD-SET" ,2 ,0 ,0 ,scm_FD_SET);

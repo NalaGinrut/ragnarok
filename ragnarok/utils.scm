@@ -40,7 +40,17 @@
   (lambda (file)
     (close (open file O_CREAT))
     ))
-    
+
+(define port-add-flags
+  (lambda (port flags)
+    (fcntl port F_SETFL (logior (fcntl port F_GETFL) flags))
+    ))
+
+(define set-port-non-block!
+  (lambda (port)
+    (port-add-flags port O_NONBLOCK)
+    ))
+
 (define ->global-time
   (lambda (t)
     (strftime "%a, %d %b %Y %T %Z" (gmtime t))
