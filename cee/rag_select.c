@@ -20,12 +20,14 @@
 #  include <config.h>
 #endif
 
-#if defined(__HAS_SYS_EPOLL_H__) && defined(__HAS_SYS_KQUEUE_H__)
+#ifndef __HAS_SYS_EPOLL_H__
+#ifndef __HAS_SYS_KQUEUE_H__
 
 #include <libguile.h>
 #include "event.h"
 #include "rag_struct.h"
 #include "rag_select.h"
+#include "rag_error.h"
 #include "lib_main.h"
 
 #ifdef __cplusplus
@@ -143,7 +145,7 @@ SCM scm_FD_ISSET(SCM fd ,SCM set);
 SCM scm_FD_SET(SCM fd ,SCM set);
 #define FUNC_NAME "FD-SET"
 {
-  int cfd = 0;
+n  int cfd = 0;
   fd_set *fset = NULL;
 
   SCM_ASSERT_FD_SET(set);
@@ -207,16 +209,11 @@ SCM scm_ragnarok_select_handler(SCM event ,SCM fd_set,
     case CLEAR:
       // TODO: CLEAR
     default:
-      /* NOTE: Never do err handler in Cee code.
-       *       Just return #f and handle it in Guile code.
-       */
       goto err;
     }
   
-  // Must not be here!
-  // FIXME: I need a error handler.
  err:
-  return SCM_BOOL_F;
+  return RAG_ERROR1("select" ,"invalid event status: %a~%" ,scm_from_int(me->status));
 }
 #undef FUNC_NAME
 
@@ -293,7 +290,8 @@ void rag_select_init()
 }
 #endif
 
-#endif // End __HAS_SYS_EPOLL_H__ && __HAS_SYS_KQUEUE_H__;
+#endif // End of !__HAS_SYS_EPOLL_H__
+#endif // End of !__HAS_SYS_KQUEUE_H__;
 
 
 

@@ -86,7 +86,7 @@ SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
       break;
     case ERR_MSG:
       SCM_VALIDATE_STRING(3 ,core);
-      c = scm_to_locale_string(core);
+      c = (SCM*)core;
       break;
     default:
       return SCM_BOOL_F;
@@ -100,7 +100,7 @@ SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
 
   ret->type = t;
   ret->status = s;
-  ret->core = (void*)c;
+  ret->core = (SCM*)c;
 
   return scm_rag_meta_event2scm(ret);
 }
@@ -218,12 +218,20 @@ SCM scm_ragnarok_event_del(SCM event ,SCM event_set)
 }
 #undef FUNC_NAME
 
+SCM scm_ragnarok_event_init(SCM init_arg)
+#define FUNC_NAME "ragnarok-event-init"
+{
+  return RAGNAROK_EVENT_INIT(init_arg);
+}
+#undef FUNC_NAME
+  
 void init_event_module()
 {
   RAGNAROK_EVENT_MODULE_INIT();
 
   init_meta_event_type();
-  
+
+  scm_c_define_gsubr("ragnarok-event-init" ,0 ,1 ,0 ,scm_ragnarok_event_init);
   scm_c_define_gsubr("ragnarok-event-handler" ,2 ,2 ,0 ,scm_ragnarok_event_handler);
   scm_c_define_gsubr("ragnarok-event-add" ,2 ,0 ,0 ,scm_ragnarok_event_add);
   scm_c_define_gsubr("ragnarok-event-del" ,2 ,0 ,0 ,scm_ragnarok_event_del);

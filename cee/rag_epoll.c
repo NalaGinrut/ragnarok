@@ -134,26 +134,19 @@ SCM scm_ragnarok_epoll_add_event(SCM event ,SCM event_set)
   ees->set[ees->count] = ee;
   ees->count++;
 
+  ret = epoll_ctl(ee->epfd ,RAG_EPOLL_GET_MODE
+		  RAG_GET_FD_CORE(ee),
+		  RAG_EPOLL_GET(es ,set ,struct epoll_event));
+
+  if(0 > ret)	
+    {
+      RAG_ERROR1("epoll_del" ,"epoll_del error! errno is %a~%" ,scm_from_int(ret));
+    }	
+
   return scm_rag_epoll_event_set2scm(ees);
 }
 #undef FUNC_NAME
   
-SCM scm_ragnarok_epoll_del_event(SCM event ,SCM event_set)
-#define FUNC_NAME "ragnarok-epoll-del-event"
-{
-  scm_rag_epoll_event *ee = NULL;
-  scm_rag_epoll_event_set *ees = NULL;
-
-  SCM_ASSERT_EPOLL_EVENT(event);
-  SCM_ASSERT_EPOLL_EVENT_SET(event_set);
-
-  ee = (scm_rag_epoll_event *)SCM_SMOB_DATA(event);
-  ees = (scm_rag_epoll_event_set *)SCM_SMOB_DATA(event_set);
-
-  // TODO: del event from event_set
-}
-#undef FUNC_NAME
-
 SCM scm_ragnarok_epoll_wait(SCM event ,SCM event_set ,SCM second ,SCM msecond)  
 #define FUNC_NAME "ragnarok-epoll-wait"
 {
@@ -190,12 +183,17 @@ SCM scm_ragnarok_epoll_wait(SCM event ,SCM event_set ,SCM second ,SCM msecond)
 		   RAG_EPOLL_GET(es ,size ,int), // max events
 		   ms);
 
+  if(0 > ret)	
+    {
+      RAG_ERROR1("epoll_wait" ,"epoll_wait error! errno is %a~%" ,scm_from_int(ret));
+    }	
+
   return scm_from_int(ret);
 }
 #undef FUNC_NAME
   
-SCM scm_ragnarok_epoll_del(SCM event ,SCM event_set)
-#define FUNC_NAME "ragnarok-epoll-del"
+SCM scm_ragnarok_epoll_del_event(SCM event ,SCM event_set)
+#define FUNC_NAME "ragnarok-epoll-del-event"
 {
   scm_rag_epoll_event *ee = NULL;
   scm_rag_epoll_event_set *es = NULL;
@@ -211,6 +209,11 @@ SCM scm_ragnarok_epoll_del(SCM event ,SCM event_set)
 		  RAG_GET_FD_CORE(ee),
 		  RAG_EPOLL_GET(es ,set ,struct epoll_event));
 
+  if(0 > ret)	
+    {
+      RAG_ERROR1("epoll_del" ,"epoll_del error! errno is %a~%" ,scm_from_int(ret));
+    }	
+  
   return scm_from_int(ret);
 }
 #undef FUNC_NAME
@@ -230,9 +233,7 @@ SCM scm_ragnarok_epoll_handler(SCM event ,SCM event_set ,SCM second ,SCM msecond
     case WAIT:
       // OK ,do we really need this???
     case BLOCK:
-      {
-	// TODO: BLOCK
-      }
+      // TODO: BLOCK
     case SLEEP:
       return scm_ragnarok_epoll_wait(event ,event_set ,second ,msecond);
       break;
@@ -246,31 +247,10 @@ SCM scm_ragnarok_epoll_handler(SCM event ,SCM event_set ,SCM second ,SCM msecond
     case CLEAR:
       // TODO: CLEAR
     default:
-      /* NOTE: Never do err handler in Cee code.
-       *       Just return #f and handle it in Guile code.
-       */
       goto err;
     }
 
-  nfds = epoll_wait(RAG_GET_FD_CORE(ee),
-		    RAG_EPOLL_GET(es ,set ,struct epoll_event), // event set
-		    RAG_EPOLL_GET(es ,size ,int), // max events
-		    ms);
-  if(0 > nfds)	
-    {
-      RAG_ERROR1("epoll_wait" ,"epoll_wait error! errno is %a~%" ,scm_from_int(nfds));
-    }
-      
-  for(;n < nfds ;n++)
-    {
-      
-  
-  
-			
-  
-
-  // TODO: run real epoll
-  
+  return RAG_ERROR1("epoll" ,"invalid event status: %a~%" ,scm_from_int(me->status));
 }
 #undef FUNC_NAME
 

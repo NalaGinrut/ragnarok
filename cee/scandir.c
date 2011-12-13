@@ -51,6 +51,7 @@ SCM scm_mmr_scandir(SCM dir, SCM filter)
     struct dirent_or_dirent64 **rdent;
     int has_filter = 0;
     int n = 0 ,i = 0;
+    char *tmp_ptr = NULL;
     SCM flag;
     SCM ret = SCM_EOL;
     SCM *prev;
@@ -68,7 +69,9 @@ SCM scm_mmr_scandir(SCM dir, SCM filter)
     scm_dynwind_begin(0);
     errno = 0;
 
-    n = scandir_or_scandir64(scm_to_locale_string(dir),
+    tmp_ptr = scm_to_locale_string(dir);
+
+    n = scandir_or_scandir64(tmp_ptr,
 			     &rdent, NULL,
 			     alphasort_or_alphasort64);
 
@@ -107,10 +110,11 @@ SCM scm_mmr_scandir(SCM dir, SCM filter)
     if(errno != 0)
 	SCM_SYSERROR;
 
+    scm_dynwind_free(tmp_ptr);
     scm_dynwind_end();
 
     free(rdent);
-
+    
     return ret;
 }
 #undef FUNC_NAME

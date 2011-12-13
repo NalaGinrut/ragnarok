@@ -66,6 +66,8 @@ SCM scm_mmr_gcrypt_mda(SCM ori_str ,SCM algo)
   
   gcry_md_close(mda);
 
+  free(str_buf);
+  str_buf = NULL;
   buf_ptr = NULL;
   
   return scm_from_locale_stringn(out_buf ,strlen(out_buf));
