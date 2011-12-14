@@ -52,7 +52,7 @@ SCM scm_mmr_check_file_perms(SCM target ,SCM perms)
 
   p = scm_to_int(perms);
   filename = scm_to_locale_string(target);
-
+  scm_dynwind_free(filename);
   
   if(stat(filename ,&sb))
     {
@@ -72,7 +72,6 @@ SCM scm_mmr_check_file_perms(SCM target ,SCM perms)
     }
   
  end:
-  scm_dynwind_free(filename);
   scm_dynwind_end();
   return ret;
 }

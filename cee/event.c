@@ -231,7 +231,7 @@ void init_event_module()
 
   init_meta_event_type();
 
-  scm_c_define_gsubr("ragnarok-event-init" ,0 ,1 ,0 ,scm_ragnarok_event_init);
+  scm_c_define_gsubr("ragnarok-event-init" ,1 ,0 ,0 ,scm_ragnarok_event_init);
   scm_c_define_gsubr("ragnarok-event-handler" ,2 ,2 ,0 ,scm_ragnarok_event_handler);
   scm_c_define_gsubr("ragnarok-event-add" ,2 ,0 ,0 ,scm_ragnarok_event_add);
   scm_c_define_gsubr("ragnarok-event-del" ,2 ,0 ,0 ,scm_ragnarok_event_del);

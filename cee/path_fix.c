@@ -140,6 +140,7 @@ SCM scm_mmr_path_fix(SCM target)
   scm_dynwind_begin(0);
   
   path = scm_to_locale_string(target);
+  scm_dynwind_free(path);
 
   if(!strstr(path ,"/.."))
     {
@@ -168,7 +169,6 @@ SCM scm_mmr_path_fix(SCM target)
   tmp = NULL;
 
  end:
-  scm_dynwind_free(path);
   scm_dynwind_end();
   return ret;
 }

@@ -32,17 +32,6 @@ typedef struct Ragnarok_Meta_Event
   rag_met type;
   rag_mes status;
   void* core;
-
-#ifdef __HAS_SYS_EPOLL_H__
-  int epfd; // epoll fd
-#endif // End of __HAS_SYS_EPOLL_H__;
-
-#ifndef __HAS_SYS_EPOLL_H__
-#ifndef __HAS_SYS_KQUEUE_H__
-  int nfds;
-#endif // End of __HAS_SYS_EPOLL_H__;
-#endif // End of __HAS_SYS_KQUEUE_H__;
-
 }*ragnarok_meta_event ,scm_rag_mevent;
 
 extern const char const *ragnarok_meta_type_string[];

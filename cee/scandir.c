@@ -70,6 +70,7 @@ SCM scm_mmr_scandir(SCM dir, SCM filter)
     errno = 0;
 
     tmp_ptr = scm_to_locale_string(dir);
+    scm_dynwind_free(tmp_ptr);
 
     n = scandir_or_scandir64(tmp_ptr,
 			     &rdent, NULL,
@@ -110,7 +111,6 @@ SCM scm_mmr_scandir(SCM dir, SCM filter)
     if(errno != 0)
 	SCM_SYSERROR;
 
-    scm_dynwind_free(tmp_ptr);
     scm_dynwind_end();
 
     free(rdent);

@@ -36,36 +36,67 @@ extern "C" {
 
 scm_t_bits scm_rag_fd_set_tag;
 
-#define SCM_ASSERT_FD_SET(x) scm_assert_smob_type(scm_rag_fd_set_tag ,(x))
+#define SCM_ASSERT_EVENT_SET(x) 	\
+  scm_assert_smob_type(scm_rag_select_event_set_tag ,(x))
 
-static SCM scm_rag_fd_set2scm(scm_rag_fd_set *fd_set)
+static SCM scm_rag_select_event_set2scm(scm_rag_epoll_event_set *event_set,
+					ses_type type)
 {
-  return SCM_RETURN_NEWSMOB(scm_rag_fd_set_tag ,fd_set);
+  return SCM_RETURN_NEWSMOB(scm_rag_select_event_set_tag ,event_set);
 }
 
-static int scm_print_rag_fd_set(SCM fd_set_smob ,SCM port,
-				scm_print_state *pstate)
+static int scm_print_rag_select_event_set(SCM event_set_smob ,SCM port,
+					  scm_print_state *pstate)
 {
-  scm_rag_fd_set *fd_set = (scm_rag_fd_set *)SCM_SMOB_DATA(fd_set_smob);
+  scm_rag_select_event_set *ses =
+    (scm_rag_select_event_set*)SCM_SMOB_DATA(event_set_smob);
   
-  scm_puts("#<rag_fd_set_smob 0x" ,port);
-  scm_intprint((long)fd_set ,16 ,port);
-  scm_puts( ">", port );
+  scm_puts("#<rag_select_event_set_smob 0x" ,port);
+  scm_intprint((long)ses ,16 ,port)					;
+  scm_puts(" nfds:");
+  scm_intprint((int)ses->nfds ,10 ,port);
+  scm_puts(" size:");
+  scm_intprint((unsigned int)ses->size ,10 ,port);
+  scm_puts(" count:");
+  scm_intprint((unsigned int)ses->count ,10 ,port);
+  scm_puts(" >", port);
   
   return 1;
 }
 
-SCM scm_make_fd_set()
-#define FUNC_NAME "make-fd-set"
+SCM scm_make_select_event_set(SCM nfds ,SCM size ,SCM type)
+#define FUNC_NAME "make-event-set"
 {
-  scm_rag_fd_set *fsd = (scm_rag_fd_set*)scm_gc_malloc(sizeof(scm_rag_fd_set));
+  ses_type t;
+  unsigned int n = 0;
+  int fd;
+  
+  SCM_VALIDATE_INUM(1 ,nfds);
+  SCM_VALIDATE_INUM(2 ,size);
+  SCM_VALIDATE_INUM(3 ,type);
+  
+  t = scm_to_int(type);
+  n = scm_to_uint(size);
+  fd = scm_to_int(nfds);
+  
+  scm_rag_fd_set *rfd = (scm_rag_fd_set*)scm_gc_malloc(sizeof(scm_rag_fd_set));
+  
+  scm_rag_select_event_set *ses =
+    (scm_rag_select_event_set*)scm_gc_malloc(sizeof(scm_rag_select_event_set),
+					     "select-event-set");
 
-  return scm_rag_fd_set2scm(fsd);
+  ses->type = t;
+  ses->count = 0;
+  ses->size = n;
+  ses->nfds = fd;
+  ses->set = rfd;
+  
+  return scm_rag_select_event_set2scm(ses);
 }
 #undef FUNC_NAME
   
 SCM scm_ragnarok_select(SCM nfds ,SCM readfds ,SCM writefds,
-		   SCM exceptfds ,SCM second ,SCM msecond)
+			SCM exceptfds ,SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-select"
 {
   int n = 0;
@@ -175,7 +206,7 @@ SCM scm_FD_ZERO(SCM set);
 }
 #undef FUNC_NAME
 
-SCM scm_ragnarok_select_handler(SCM event ,SCM fd_set,
+SCM scm_ragnarok_select_handler(SCM event ,SCM event_set,
 				SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-select-handler"
 {
@@ -257,15 +288,31 @@ SCM scm_ragnarok_select_add_event(SCM event ,SCM fd_set)
 }
 #undef FUNC_NAME
 
-SCM_RAG_OBJ_GETTER(mevent ,type ,type ,scm_from_int);
-SCM_RAG_OBJ_SETTER(mevent ,type ,type ,scm_from_int ,scm_to_int);
-
-SCM_RAG_OBJ_GETTER(mevent ,status ,status ,scm_from_int);
-SCM_RAG_OBJ_SETTER(mevent ,status ,status ,scm_from_int ,scm_to_int);
-
-SCM_RAG_OBJ_GETTER(mevent ,core ,core ,rag_scm_from_pointer);
-SCM_RAG_OBJ_SETTER(mevent ,core ,core ,PTR2SCM ,SCM2PTR);
+SCM scm_ragnarok_select_init(SCM size)
+#define FUNC_NAME "ragnarok-select-add-event"
+{
+  SCM read_set = scm_make_select_event_set(0 ,size ,READ);
+  SCM write_set = scm_make_select_event_set(0 ,size ,WRITE);
+  SCM except_set = scm_make_select_event_set(0 ,size ,EXCEPT);
   
+  return scm_values(read_set ,write_set ,except_set);
+}
+#undef FUNC_NAME
+
+// event_set 
+SCM_RAG_OBJ_GETTER(event_set ,type ,type ,scm_from_int);
+SCM_RAG_OBJ_SETTER(event_set ,type ,type ,scm_from_int ,scm_to_int);
+
+SCM_RAG_OBJ_GETTER(event_set ,count ,count ,scm_from_uint);
+SCM_RAG_OBJ_SETTER(event_set ,count ,count ,scm_from_uint ,scm_to_uint);
+
+SCM_RAG_OBJ_GETTER(event_set ,size ,size ,scm_from_uint);
+SCM_RAG_OBJ_SETTER(event_set ,size ,size ,scm_from_uint ,scm_to_uint);
+
+SCM_RAG_OBJ_GETTER(event_set ,nfds ,nfds ,scm_from_int);
+SCM_RAG_OBJ_SETTER(event_set ,nfds ,nfds ,scm_from_int ,scm_to_int);
+// we don't need ref/set! of "set"
+
 void rag_select_init()
 {
   // fd_set SMOB init
@@ -284,6 +331,20 @@ void rag_select_init()
 		     2 ,0 ,0 ,scm_ragnarok_select_add_event);
   scm_c_define_gsubr("ragnarok-select-del-event",
 		     2 ,0 ,0 ,scm_ragnarok_select_del_event);
+  scm_c_define_gsubr("ragnarok-select-init",
+		     0 ,1 ,0 ,scm_ragnarok_select_init);
+
+  SCM_MAKE_GSUBR_OBJ_GET(event_set ,type);
+  SCM_MAKE_GSUBR_OBJ_SET(event_set ,type);
+
+  SCM_MAKE_GSUBR_OBJ_GET(event_set ,count);
+  SCM_MAKE_GSUBR_OBJ_SET(event_set ,count);
+
+  SCM_MAKE_GSUBR_OBJ_GET(event_set ,size);
+  SCM_MAKE_GSUBR_OBJ_SET(event_set ,size);
+
+  SCM_MAKE_GSUBR_OBJ_GET(event_set ,nfds);
+  SCM_MAKE_GSUBR_OBJ_SET(event_set ,nfds);
 }
 
 #ifdef __cplusplus

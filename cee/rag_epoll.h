@@ -24,19 +24,26 @@
 #include <sys/epoll.h>
 
 #define RAGNAROK_EVENT_ADD scm_ragnarok_epoll_add_event
-#define RAGNAROK_EVENT_DEL scm_ragnarok_select_del_event
+#define RAGNAROK_EVENT_DEL scm_ragnarok_epoll_del_event
 #define RAGNAROK_EVENT_HANDLER scm_ragnarok_epoll_handler
 #define RAGNAROK_EVENT_MODULE_INIT rag_ragnarok_epoll_init
+#define RAGNAROK_EVENT_INIT scm_ragnarok_epoll_init
+
+typedef enum Epoll_Event_Set_Type 
+  { READ = 0 ,WRITE ,EXCEPT
+  }ees_type;
 
 typedef struct Ragnarok_Epoll_Event_Set
 {
+  ees_type type;
   unsigned int count;
   unsigned int size;
+  int epfd;
   struct epoll_event *set[];
-}scm_rag_epoll_event_set;
+}scm_rag_epoll_event_set ,scm_rag_event_set;
   
 typedef (struct epoll_event scm_rag_epoll_event);
-typedef (struct epoll_event scm_epoll_event_set[]);
+typedef (struct epoll_event *scm_epoll_event_set[]);
 
 extern scm_t_bits scm_rag_epoll_event_tag;
 extern scm_t_bits scm_rag_epoll_event_set_tag;

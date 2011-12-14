@@ -32,11 +32,25 @@
 #define RAGNAROK_EVENT_ADD scm_ragnarok_select_add_event
 #define RAGNAROK_EVENT_DEL scm_ragnarok_select_del_event
 #define RAGNAROK_EVENT_HANDLER scm_ragnarok_select_handler
+#define RAGNAROK_EVENT_INIT scm_ragnarok_select_init
 #define RAGNAROK_EVENT_MODULE_INIT rag_select_init
+
+typedef enum Select_Event_Set_Type 
+  { READ = 0 ,WRITE ,EXCEPT
+  }ses_type;
+
+typedef struct Ragnarok_Select_Event_Set
+{
+  ses_type type;
+  unsigned int count;
+  unsigned int size;
+  int nfds;
+  fd_set *set;
+}scm_rag_select_event_set ,scm_rag_event_set;
 
 typedef fd_set scm_rag_fd_set;
 
-extern scm_t_bits scm_rag_fd_set_tag;
+extern scm_t_bits scm_rag_select_event_set_tag;
 
 void rag_select_init();
 
