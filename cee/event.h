@@ -19,6 +19,8 @@
 #ifndef __RAGNAROK_EVENT_H__
 #define __RAGNAROK_EVENT_H__
 
+#include "generic.h"
+
 typedef enum Meta_Event_Type 
   { READ_FD = 0 ,WRITE_FD ,ERR_MSG ,UNKNOWN
   }rag_met;
@@ -31,6 +33,17 @@ typedef struct Ragnarok_Meta_Event
 {
   rag_met type;
   rag_mes status;
+
+  /* NOTE: mode is only between 'level-triger' and 'edge-triger'.
+           So only kqueue/epoll uses it. select/poll doesn't.
+	   And Ragnarok doesn't support poll.
+  */
+  int mode;
+
+#ifdef __HAS_SYS_EPOLL_H__
+  int one_shot; // is EPOLLONSHOT mode?
+#endif // End of __HAS_SYS_EPOLL_H__;
+  
   void* core;
 }*ragnarok_meta_event ,scm_rag_mevent;
 

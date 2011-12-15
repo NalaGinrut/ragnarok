@@ -38,8 +38,8 @@
 #ifndef __HAS_SYS_EPOLL_H__
 #ifndef __HAS_SYS_KQUEUE_H__
 #include "rag_select.h"
-#endif // End of no __HAS_SYS_KQUEUE_H__;
-#endif // End of no __HAS_SYS_EPOLL_H__;
+#endif // End of !__HAS_SYS_KQUEUE_H__;
+#endif // End of !__HAS_SYS_EPOLL_H__;
 
 #ifdef __cplusplus
 extern "C" {
@@ -192,7 +192,7 @@ void init_meta_event_type()
   SCM_MAKE_GSUBR_OBJ_SET(mevent ,core);
 }
   
-SCM scm_ragnarok_event_handler(SCM event ,SCM event_set ,SCM second ,SCM msecond)
+SCM scm_ragnarok_event_handler(SCM event_set_list ,SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-event-handler"
 {
   /* NOTE: timeval is variable while type is different.
@@ -200,7 +200,7 @@ SCM scm_ragnarok_event_handler(SCM event ,SCM event_set ,SCM second ,SCM msecond
    *  READY -> timeout;
    *  BLOCK -> timeout;
    */
-  return RAGNAROK_EVENT_HANDLER(event ,event_set ,second ,msecond);
+  return RAGNAROK_EVENT_HANDLER(event_set_list ,second ,msecond);
 }
 #undef FUNC_NAME
   

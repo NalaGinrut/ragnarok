@@ -37,21 +37,17 @@ scm_t_bits scm_rag_epoll_event_tag;
 scm_t_bits scm_rag_epoll_event_set_tag;
   
 #define SCM_ASSERT_EPOLL_EVENT(x) scm_assert_smob_type(scm_rag_epoll_event_tag ,(x))
+  
 #define SCM_ASSERT_EPOLL_EVENT_SET(x) \
   scm_assert_smob_type(scm_rag_epoll_event_set_tag ,(x))
 
-static SCM scm_rag_epoll_event2scm(scm_rag_epoll_event *ee)
-{
-  return SCM_RETURN_NEWSMOB(scm_rag_epoll_event_tag ,ee);
-}
-
-static SCM scm_rag_epoll_event_set2scm(scm_rag_epoll_event_set *ees)
+static inline SCM scm_rag_epoll_event_set2scm(scm_rag_epoll_event_set *ees)
 {
   return SCM_RETURN_NEWSMOB(scm_rag_epoll_event_set_tag ,ees);
 }
 
 static int scm_print_rag_epoll_event(SCM ee_smob ,SCM port,
-				scm_print_state *pstate)
+				     scm_print_state *pstate)
 {
   scm_rag_epoll_event *ee = (scm_rag_epoll_event *)SCM_SMOB_DATA(ee_smob);
   
@@ -65,28 +61,47 @@ static int scm_print_rag_epoll_event(SCM ee_smob ,SCM port,
 static int scm_print_rag_epoll_event_set(SCM ees_smob ,SCM port,
 					 scm_print_state *pstate)
 {
-  scm_rag_epoll_event *ees = (scm_rag_epoll_event_set *)SCM_SMOB_DATA(ees_smob);
+  scm_rag_epoll_event_set *ees = (scm_rag_epoll_event_set *)SCM_SMOB_DATA(ees_smob);
   
   scm_puts("#<rag_epoll_event_set_smob 0x" ,port);
   scm_intprint((long)ees ,16 ,port);
-  scm_puts(" epfd:");
+  scm_puts(" epfd:" ,port);
   scm_intprint((int)ees->epfd ,10 ,port);
-  scm_puts(" size:");
+  scm_puts(" size:" ,port);
   scm_intprint((unsigned int)ees->size ,10 ,port);
-  scm_puts(" count:");
+  scm_puts(" count:" ,port);
   scm_intprint((unsigned int)ees->count ,10 ,port);
   scm_puts(" >", port);
   
   return 1;
 }
 
-SCM scm_make_epoll_event()
+SCM scm_make_epoll_event(SCM oneshot)
 #define FUNC_NAME "make-epoll-event"
 {
+  SCM_VALIDATE_BOOL(1 ,oneshot);
+    
   scm_rag_epoll_event *ee =
     (scm_rag_epoll_event*)scm_gc_malloc(sizeof(scm_rag_epoll_event) ,"epoll-event");
 
-  return scm_rag_epoll_event2scm(ee);
+  scm_rag_mevent *me =
+    (scm_rag_mevent*)scm_gc_malloc(sizeof(scm_rag_mevent) ,"meta-event");
+  
+  if(!SCM_UNBNDP(oneshot))
+    {
+      if(RAG_USE_ONE_SHOT_P(oneshot))
+	me->one_shot = TRUE;
+      else
+	me->one_shot = FALSE;
+    }
+  else
+    {
+      me->one_shot = FALSE;
+    }
+
+  me->core = (void*)ee;
+  
+  return scm_rag_mevent2scm(me);
 }
 #undef FUNC_NAME
 
@@ -94,19 +109,20 @@ SCM scm_make_epoll_event_set(SCM size ,SCM type)
 #define FUNC_NAME "make-epoll-event-set"
 {
   unsigned int n = 0;
-  ees_type t;
+  int t;
   scm_epoll_event_set *set = NULL;
   scm_rag_epoll_event_set *ees = NULL;
   int epfd = 0;
   
-  SCM_VALIDATE_INUM(1 ,size);
-  SCM_VALIDATE_INUM(2 ,type);
+  SCM_VALIDATE_INT(1 ,size);
+  SCM_VALIDATE_INT(2 ,type);
   
   n = scm_to_uint(size);
   t = scm_to_int(type);
   
-  set = (scm_epoll_event_set)scm_gc_malloc(sizeof(struct epoll_event)*n,
+  set = (scm_epoll_event_set*)scm_gc_malloc(sizeof(struct epoll_event)*n,
 					   "epoll-event-set");
+
   ees = (scm_rag_epoll_event_set*)scm_gc_malloc(sizeof(scm_rag_epoll_event_set),
 						"rag-epoll-event-set");
   epfd = epoll_create(size);
@@ -132,20 +148,35 @@ SCM scm_ragnarok_epoll_add_event(SCM event ,SCM event_set)
 {
   scm_rag_epoll_event *ee = NULL;
   scm_rag_epoll_event_set *ees = NULL;
-
+  int fd = 0;
+  int oneshot;
+  int mode;
+  
   SCM_ASSERT_EPOLL_EVENT(event);
   SCM_ASSERT_EPOLL_EVENT_SET(event_set);
 
   ee = (scm_rag_epoll_event *)SCM_SMOB_DATA(event);
   ees = (scm_rag_epoll_event_set *)SCM_SMOB_DATA(event_set);
+  fd = RAG_GET_FD_CORE(ee);
 
   // FIXME: this must be exclusive
   ees->set[ees->count] = ee;
   ees->count++;
-
-  ret = epoll_ctl(es->epfd ,RAG_EPOLL_GET_MODE,
-		  RAG_GET_FD_CORE(ee),
-		  RAG_EPOLL_GET(es ,set ,struct epoll_event));
+  ee->data.fd = fd;
+  oneshot = ee->one_shot ? EPOLLONESHOT : 0;
+  
+  switch(ee->type)
+    {
+    case READ:
+      e->events = EPOLLIN | mode | oneshot;
+    case WRITE:
+      e->events = EPOLLOUT | mode | oneshot;
+    default:
+      RAG_ERROR1("epoll_add" ,"invalid event type: %a~%" ,scm_from_int(ee->type));
+    }
+        
+  ret = epoll_ctl(ees->epfd ,EPOLL_CTL_ADD ,fd,
+		  RAG_EPOLL_GET(ees ,set ,scm_rag_epoll_event));
 
   if(0 > ret)	
     {
@@ -168,12 +199,12 @@ SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
 
   if(!SCM_UNBNDP(ms))
     {
-      SCM_VALIDATE_INUM(3 ,second);
+      SCM_VALIDATE_INT(3 ,second);
       s = (long)scm_from_long(second);
 
       if(!SCM_UNBNDP(msecond))
 	{
-	  SCM_VALIDATE_INUM(4 ,msecond);
+	  SCM_VALIDATE_INT(4 ,msecond);
 	  ms = (long)scm_from_long(msecond);
 	}
       
@@ -202,19 +233,18 @@ SCM scm_ragnarok_epoll_del_event(SCM event ,SCM event_set)
 #define FUNC_NAME "ragnarok-epoll-del-event"
 {
   scm_rag_epoll_event *ee = NULL;
-  scm_rag_epoll_event_set *es = NULL;
+  scm_rag_epoll_event_set *ees = NULL;
   int ret = 0;
     
   SCM_ASSERT_EPOLL_EVENT(event);
   SCM_ASSERT_EPOLL_EVENT_SET(event_set);
 
-  errno = 0;
   ee = (scm_rag_epoll_event*)SMOB_DATA(event);
-  es = (scm_rag_epoll_event_set*)SMOB_DATA(event_set);
+  ees = (scm_rag_epoll_event_set*)SMOB_DATA(event_set);
 
-  ret = epoll_ctl(es->epfd ,EPOLL_CTL_DEL,
+  ret = epoll_ctl(ees->epfd ,EPOLL_CTL_DEL,
 		  RAG_GET_FD_CORE(ee),
-		  RAG_EPOLL_GET(es ,set ,struct epoll_event));
+		  RAG_EPOLL_GET(ees ,set ,struct epoll_event));
 
   if(0 > ret)	
     {
@@ -225,47 +255,82 @@ SCM scm_ragnarok_epoll_del_event(SCM event ,SCM event_set)
 }
 #undef FUNC_NAME
 
-SCM scm_ragnarok_epoll_handler(SCM event ,SCM event_set ,SCM second ,SCM msecond)
+SCM scm_ragnarok_epoll_handler(SCM event_set_list ,SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-epoll-handler"
 {
-  scm_rag_mevent *me = NULL;
+  SCM read_set;
+  SCM write_set;
+  SCM event_set;
+  
+  SCM_VALIDATE_LIST(1 ,event_set_list);
+  read_set = scm_car(event_set_list);
+  write_set = scm_cadr(event_set_list);
 
-  SCM_ASSERT_EPOLL_EVENT(event);
+  SCM_ASSERT_EPOLL_EVENT_SET(read_set);
+  SCM_ASSERT_EPOLL_EVENT_SET(write_set);
+
+  event_set = scm_append(read_set ,write_set);
+  
+  return scm_ragnarok_epoll(event_set ,second ,msecond);
+}
+#undef FUNC_NAME
+
+SCM scm_ragnarok_epoll(SCM event_set ,SCM second ,SCM msecond)
+#define FUNC_NAME "ragnarok-epoll"
+{
+  scm_rag_epoll_event_set *ees = NULL;
+  int epfd;
+  int fd;
+  int nfds;
+  long s = 0;
+  long ms = 0;
+  SCM ret = SCM_EOL;
+  SCM *prev = &ret;
+
   SCM_ASSERT_EPOLL_EVENT_SET(event_set);
 
-  me = (scm_rag_epoll_event*)SMOB_DATA(event);
+  if(!SCM_UNBNDP(ms))
+    {
+      SCM_VALIDATE_INT(2 ,second);
+      s = (long)scm_from_long(second);
 
-  switch(me->status)
-    {	
-    case WAIT:
-      // OK ,do we really need this???
-    case BLOCK:
-      // TODO: BLOCK
-    case SLEEP:
-      return scm_ragnarok_epoll_wait(event_set ,second ,msecond);
-      break;
-    case DEAD:
-      // delete event from event_set if DEAD
-      return scm_ragnarok_epoll_del(event ,event_set);
-      break;
-    case READY:
-      return scm_ragnarok_epoll(scm_from_int(fd) ,fd_set ,second ,msecond);
-      break;
-    case CLEAR:
-      // TODO: CLEAR
-    default:
-      goto err;
+      if(!SCM_UNBNDP(msecond))
+	{
+	  SCM_VALIDATE_INT(3 ,msecond);
+	  ms = (long)scm_from_long(msecond);
+	}
+      
+      ms += s*1000; // convert to mseconds since epoll_wait only accept msecond;
     }
 
-  return RAG_ERROR1("epoll" ,"invalid event status: %a~%" ,scm_from_int(me->status));
+  ms = ms ? ms : -1;
+
+  ees = (scm_rag_epoll_event_set*)SMOB_DATA(event_set);
+
+  epfd = ees->epfd;
+
+  nfds = epoll_wait(epfd ,event_set ,ees->size ,ms);
+  if(0 > nfds)
+    {
+      RAG_ERROR1("epoll inner" ,"epoll_wait error! ret is %a~%" ,scm_from_int(nfds));
+    }
+
+  while(nfds)
+    {
+      fd = ees->set[nfds--].data.fd;
+      *prev = scm_cons(scm_from_int(fd) ,SCM_EOL);
+      prev = SCM_CDRLOC(*prev);
+    }
+
+  return ret;
 }
 #undef FUNC_NAME
 
 SCM scm_ragnarok_epoll_init(SCM size)
 #define FUNC_NAME "ragnarok-epoll-init"
 {
-  SCM read_set = scm_make_epoll_event_set(size ,READ);
-  SCM write_set = scm_make_epoll_event_set(size ,WRITE);
+  SCM read_set = scm_make_epoll_event_set(size ,SCM_RAG_READ);
+  SCM write_set = scm_make_epoll_event_set(size ,SCM_RAG_WRITE);
   SCM except_set = SCM_BOOL_F; // no except set for epoll
   
   return scm_values(read_set ,write_set ,except_set);
@@ -293,7 +358,8 @@ void rag_ragnarok_epoll_init()
   scm_c_define_gsubr("ragnarok-epoll-init",
 		     2 ,0 ,0 ,scm_ragnarok_epoll_init);
   scm_c_define_gsubr("ragnarok-epoll-handler",
-		     2 ,2 ,0 ,scm_ragnarok_epoll_handler);
+		     1 ,2 ,0 ,scm_ragnarok_epoll_handler);
+  scm_c_define_gsubr("ragnarok-epoll" ,1 ,2 ,0 ,scm_ragnarok_epoll);
   scm_c_define_gsubr("ragnarok-epoll-wait",
 		     1 ,2 ,0 ,scm_ragnarok_epoll_wait);
   scm_c_define_gsubr("ragnarok-epoll-add-event",

@@ -22,6 +22,7 @@
 #ifdef __HAS_SYS_EPOLL_H__
 
 #include <sys/epoll.h>
+#include "generic.h"
 
 #define RAGNAROK_EVENT_ADD scm_ragnarok_epoll_add_event
 #define RAGNAROK_EVENT_DEL scm_ragnarok_epoll_del_event
@@ -29,24 +30,23 @@
 #define RAGNAROK_EVENT_MODULE_INIT rag_ragnarok_epoll_init
 #define RAGNAROK_EVENT_INIT scm_ragnarok_epoll_init
 
-typedef enum Epoll_Event_Set_Type 
-  { READ = 0 ,WRITE ,EXCEPT
-  }ees_type;
+#define RAG_USE_ONE_SHOT_P(oneshot)		\
+  (SCM_EQ_P(oneshot ,RAG_STRING("oneshot")))
 
 typedef struct Ragnarok_Epoll_Event_Set
 {
-  ees_type type;
+  int type;
   unsigned int count;
   unsigned int size;
   int epfd;
   struct epoll_event *set[];
 }scm_rag_epoll_event_set ,scm_rag_event_set;
   
-typedef (struct epoll_event scm_rag_epoll_event);
-typedef (struct epoll_event *scm_epoll_event_set[]);
+typedef struct epoll_event scm_rag_epoll_event;
+typedef struct epoll_event scm_epoll_event_set[];
 
-extern scm_t_bits scm_rag_epoll_event_tag;
-extern scm_t_bits scm_rag_epoll_event_set_tag;
+extern scm_t_bits rag_event_tag;
+extern scm_t_bits rag_event_set_tag;
 
 #define RAG_EPOLL_GET(es ,elem ,type)  (*((type)*)(es)->(elem))
 

@@ -35,7 +35,8 @@ extern "C" {
 #endif
 
 scm_t_bits scm_rag_fd_set_tag;
-
+scm_t_bits scm_rag_select_event_set_tag;
+  
 #define SCM_ASSERT_EVENT_SET(x) 	\
   scm_assert_smob_type(scm_rag_select_event_set_tag ,(x))
 
@@ -67,13 +68,13 @@ static int scm_print_rag_select_event_set(SCM event_set_smob ,SCM port,
 SCM scm_make_select_event_set(SCM nfds ,SCM size ,SCM type)
 #define FUNC_NAME "make-event-set"
 {
-  ses_type t;
+  int t;
   unsigned int n = 0;
   int fd;
   
-  SCM_VALIDATE_INUM(1 ,nfds);
-  SCM_VALIDATE_INUM(2 ,size);
-  SCM_VALIDATE_INUM(3 ,type);
+  SCM_VALIDATE_INT(1 ,nfds);
+  SCM_VALIDATE_INT(2 ,size);
+  SCM_VALIDATE_INT(3 ,type);
   
   t = scm_to_int(type);
   n = scm_to_uint(size);
@@ -95,47 +96,59 @@ SCM scm_make_select_event_set(SCM nfds ,SCM size ,SCM type)
 }
 #undef FUNC_NAME
   
-SCM scm_ragnarok_select(SCM nfds ,SCM readfds ,SCM writefds,
-			SCM exceptfds ,SCM second ,SCM msecond)
+SCM scm_ragnarok_select(SCM nfds ,SCM read_set ,SCM write_set,
+			SCM except_set ,SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-select"
 {
   int n = 0;
-  scm_rag_fd_set *rfd = NULL;
-  scm_rag_fd_set *wfd = NULL;
-  scm_rag_fd_set *efd = NULL;
+  scm_rag_fd_set *rs = NULL;
+  scm_rag_fd_set *ws = NULL;
+  scm_rag_fd_set *es = NULL;
   scm_rag_fd_set *ready_set = NULL;
   long s = 0L;
   long ms = 0L;
+  int i;
   struct timeval tv;
+  SCM ret = SCM_EOL;
+  SCM *prev = &ret;
 
-  SCM_VALIDATE_INUM(1 ,nfds);
-  SCM_ASSERT_FD_SET(readfds);
-  SCM_ASSERT_FD_SET(writefds);
-  SCM_ASSERT_FD_SET(exceptfds);
+  SCM_VALIDATE_INT(1 ,nfds);
+  SCM_ASSERT_EVENT_SET(read_set);
+  SCM_ASSERT_EVENT_SET(write_set);
+  SCM_ASSERT_EVENT_SET(except_set);
 
   if(!SCM_UNBNDP(ms))
     {
-      SCM_VALIDATE_INUM(5 ,second);
+      SCM_VALIDATE_INT(5 ,second);
       s = (long)scm_from_long(second);
 
       if(!SCM_UNBNDP(msecond))
 	{
-	  SCM_VALIDATE_INUM(6 ,msecond);
+	  SCM_VALIDATE_INT(6 ,msecond);
 	  ms = (long)scm_from_long(msecond);
 	}
     }
 
   n = scm_from_int(nfds);
-  rfd = (scm_rag_fd_set*)SMOB_DATA(readfds);
-  wfd = (scm_rag_fd_set*)SMOB_DATA(writefds);
-  efd = (scm_rag_fd_set*)SMOB_DATA(exceptfds);
+  rs = (scm_rag_event_set*)SMOB_DATA(read_set);
+  ws = (scm_rag_event_set*)SMOB_DATA(write_set);
+  es = (scm_rag_event_set*)SMOB_DATA(except_set);
     
   tv.tv_sec = (long)s;
   tv.tv_usec = (long)us;
 
-  ready_set = select(n ,rfd ,wfd ,efd ,&tv);
-  
-  return scm_rag_fd_set2scm(ready_set);
+  ready_set = select(n ,rs->set ,ws->set ,es->set ,&tv);
+    
+  for(i=0;i<n;i++)
+    {
+      if(FD_ISSET(i ,&ready_set))
+	{
+	  *prev = scm_cons(scm_from_int(i) ,SCM_EOL);
+	  prev = SCM_CDRLOC(*prev);
+	}
+    }
+
+  return ret;
 }
 #undef FUNC_NAME
 
@@ -146,7 +159,7 @@ SCM scm_FD_CLR(SCM fd ,SCM set)
   fd_set *fset = NULL;
 
   SCM_ASSERT_FD_SET(set);
-  SCM_VALIDATE_INUM(1 ,fd);
+  SCM_VALIDATE_INT(1 ,fd);
 
   cfd = scm_from_int(fd);
   fset = (fd_set*)SMOB_DATA(set);
@@ -164,7 +177,7 @@ SCM scm_FD_ISSET(SCM fd ,SCM set);
   fd_set *fset = NULL;
 
   SCM_ASSERT_FD_SET(set);
-  SCM_VALIDATE_INUM(1 ,fd);
+  SCM_VALIDATE_INT(1 ,fd);
 
   cfd = scm_from_int(fd);
   fset = (fd_set*)SMOB_DATA(set);
@@ -180,7 +193,7 @@ n  int cfd = 0;
   fd_set *fset = NULL;
 
   SCM_ASSERT_FD_SET(set);
-  SCM_VALIDATE_INUM(1 ,fd);
+  SCM_VALIDATE_INT(1 ,fd);
 
   cfd = scm_from_int(fd);
   fset = (fd_set*)SMOB_DATA(set);
@@ -206,45 +219,26 @@ SCM scm_FD_ZERO(SCM set);
 }
 #undef FUNC_NAME
 
-SCM scm_ragnarok_select_handler(SCM event ,SCM event_set,
-				SCM second ,SCM msecond)
+SCM scm_ragnarok_select_handler(SCM event_set_list ,SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-select-handler"
 {
   scm_rag_mevent *me = NULL;
+  SCM rs ,ws ,es;
   SCM fd;
   
   SCM_ASSERT_META_EVENT(event);
+  SCM_VALIDATE_LIST(2 ,event_set_list);
 
+  rs = scm_car(event_set_list);
+  ws = scm_cadr(event_set_list);
+  es = scm_caddr(event_set_list);
+  
   me = (scm_rag_mevent*)SCM_SMOB_DATA(event);
   fd = RAG_GET_FD_CORE(me);
   /* FIXME: How can I handle other type?
    */
 
-  switch(me->status)
-    {	
-    case WAIT:
-      // OK ,do we really need this???
-    case BLOCK:
-      // TODO: BLOCK
-    case SLEEP:
-      return scm_mmr_sleep(second ,msecond);
-      break;
-    case DEAD:
-      // delete event from event_set if DEAD
-      fd_set *fset = SCM_SMOB_DATA(event_set);
-      return fd_clr(fd ,fset);
-      break;
-    case READY:
-      return scm_ragnarok_select(scm_from_int(fd) ,fd_set ,second ,msecond);
-      break;
-    case CLEAR:
-      // TODO: CLEAR
-    default:
-      goto err;
-    }
-  
- err:
-  return RAG_ERROR1("select" ,"invalid event status: %a~%" ,scm_from_int(me->status));
+  return scm_ragnarok_select(scm_from_int(fd) ,rs ,ws ,es ,second ,msecond);
 }
 #undef FUNC_NAME
 
@@ -291,9 +285,13 @@ SCM scm_ragnarok_select_add_event(SCM event ,SCM fd_set)
 SCM scm_ragnarok_select_init(SCM size)
 #define FUNC_NAME "ragnarok-select-add-event"
 {
-  SCM read_set = scm_make_select_event_set(0 ,size ,READ);
-  SCM write_set = scm_make_select_event_set(0 ,size ,WRITE);
-  SCM except_set = scm_make_select_event_set(0 ,size ,EXCEPT);
+  SCM r = scm_from_int(READ);
+  SCM w = scm_from_int(WRITE);
+  SCM e = scm_from_int(EXCEPT);
+  
+  SCM read_set = scm_make_select_event_set(0 ,size ,r);
+  SCM write_set = scm_make_select_event_set(0 ,size ,w);
+  SCM except_set = scm_make_select_event_set(0 ,size ,e);
   
   return scm_values(read_set ,write_set ,except_set);
 }
@@ -320,13 +318,13 @@ void rag_select_init()
 
   // procedure init
   scm_c_define_gsubr("make-fd-set" ,0 ,0 ,0 ,scm_make_fd_set);
-  scm_c_define_gsubr("ragnarok-select" ,4 ,2 ,0 ,scm_ragnarok_select);
   scm_c_define_gsubr("FD-CLR" ,2 ,0 ,0 ,scm_FD_CLR);
   scm_c_define_gsubr("FD-ISSET" ,2 ,0 ,0 ,scm_FD_ISSET);
   scm_c_define_gsubr("FD-SET" ,2 ,0 ,0 ,scm_FD_SET);
   scm_c_define_gsubr("FD-ZERO" ,1 ,0 ,0 ,scm_FD_ZERO);
+  scm_c_define_gsubr("ragnarok-select" ,4 ,2 ,0 ,scm_ragnarok_select);
   scm_c_define_gsubr("ragnarok-select-handler",
-		     2 ,2 ,0 ,scm_ragnarok_select_handler);
+		     1 ,2 ,0 ,scm_ragnarok_select_handler);
   scm_c_define_gsubr("ragnarok-select-add-event",
 		     2 ,0 ,0 ,scm_ragnarok_select_add_event);
   scm_c_define_gsubr("ragnarok-select-del-event",

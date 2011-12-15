@@ -35,13 +35,9 @@
 #define RAGNAROK_EVENT_INIT scm_ragnarok_select_init
 #define RAGNAROK_EVENT_MODULE_INIT rag_select_init
 
-typedef enum Select_Event_Set_Type 
-  { READ = 0 ,WRITE ,EXCEPT
-  }ses_type;
-
 typedef struct Ragnarok_Select_Event_Set
 {
-  ses_type type;
+  int type;
   unsigned int count;
   unsigned int size;
   int nfds;

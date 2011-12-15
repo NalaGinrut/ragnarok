@@ -16,17 +16,21 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RAGNAROK_ERROR_H__
-#define __RAGNAROK_ERROR_H__
+#ifndef __RAGNAROK_GENERIC_H__
+#define __RAGNAROK_GENERIC_H__
 
-#include "generic.h"
+#define TRUE 1
+#define FALSE 0
 
-#define RAG_ERROR(proc ,msg ,arg ,rest) 		\
-  scm_error(RAG_SYMBOL("ragnarok-error") ,proc ,msg ,arg ,rest)
+#define READ  0
+#define WRITE 1
+#define EXCEPT 2
 
-#define RAG_ERROR1(proc ,msg ,arg) 		\
-  scm_error(RAG_SYMBOL("ragnarok-error") ,proc ,msg ,arg ,SCM_EOL)
+#define SCM_RAG_READ scm_from_int(READ)
+#define SCM_RAG_WRITE scm_from_int(WRITE)
+#define SCM_RAG_EXCEPT scm_from_int(EXCEPT)
 
+#define RAG_SYMBOL(str) scm_string_to_symbol(scm_from_locale_string(str))
+#define RAG_STRING(str) scm_from_locale_string(str)
 
-
-#endif // End of __RAGNAROK_ERROR_H__;
+#endif // End of __RAGNAROK_GENERIC_H__;

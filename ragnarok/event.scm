@@ -19,6 +19,18 @@
   #:export ()
   )
 
+;; TODO: 1. three lists for read/write/except 
+;;       2. add read/write/except event into correspding list
+;;       3. remember ragnarok-event-init returns values
+;;       4. ragnarok-event-handler returns lists for ready fd
+;;       5. enumerate read/write list and check if fd of the event elem
+;;          equal to the ready-fd-list.
+;; FIXME: how to determine a fd has both read and write type from ready-fd-list?
+;;        that maybe cause a read-fd be written if it can be written.
+;;        I think the IO operation would return EWOULDBREAK or something else.
+;;        Then I could igore this operation. Anyway, it's a thread, and it'll be 
+;;        over soon. (Consider the thread creating overhead, this must optimze later)
+
 (define ragnarok-kickout-events
   (lambda (event-list event-set)
     ;; TODO: del every event of event-list from event-set
