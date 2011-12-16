@@ -293,7 +293,7 @@ SCM scm_ragnarok_select_init(SCM size)
   SCM write_set = scm_make_select_event_set(0 ,size ,w);
   SCM except_set = scm_make_select_event_set(0 ,size ,e);
   
-  return scm_values(read_set ,write_set ,except_set);
+  return scm_values(scm_list_3(read_set ,write_set ,except_set));
 }
 #undef FUNC_NAME
 

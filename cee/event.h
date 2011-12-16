@@ -22,7 +22,7 @@
 #include "generic.h"
 
 typedef enum Meta_Event_Type 
-  { READ_FD = 0 ,WRITE_FD ,ERR_MSG ,UNKNOWN
+  { READ_FD = 0 ,WRITE_FD ,READ_EVENT ,WRITE_EVENT ,ERR_MSG ,UNKNOWN
   }rag_met;
 
 typedef enum Meta_Event_Status 
@@ -52,7 +52,7 @@ extern const char const *ragnarok_meta_status_string[];
 extern scm_t_bits rag_mevent_tag;
 
 #define SCM_ASSERT_META_EVENT(x) \
-  scm_assert_smob_type(ragnarok_meta_event_tag ,x)
+  scm_assert_smob_type(rag_mevent_tag ,x)
 
 #define RAG_GET_FD_CORE(mevent) (*(int*)((mevent)->core))
 
