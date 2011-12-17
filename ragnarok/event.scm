@@ -19,6 +19,10 @@
   #:export ()
   )
 
+(module-export-all! (current-module))
+
+(dynamic-call "init_event_module" (dynamic-link "libragnarok-event"))
+
 ;; TODO: 1. three lists for read/write/except 
 ;;       2. add read/write/except event into correspding list
 ;;       3. remember ragnarok-event-init returns values

@@ -26,9 +26,9 @@
 
 #define RAGNAROK_EVENT_ADD scm_ragnarok_epoll_add_event
 #define RAGNAROK_EVENT_DEL scm_ragnarok_epoll_del_event
-#define RAGNAROK_EVENT_HANDLER scm_ragnarok_epoll_handler
-#define RAGNAROK_EVENT_MODULE_INIT rag_ragnarok_epoll_init
+#define RAGNAROK_EVENT_HANDLER  scm_ragnarok_epoll_handler
 #define RAGNAROK_EVENT_INIT scm_ragnarok_epoll_init
+#define RAGNAROK_EVENT_MODULE_INIT() ragnarok_epoll_module_init()
 
 #define RAG_USE_ONE_SHOT_P(oneshot)		\
   (SCM_EQ_P(oneshot ,RAG_STRING("oneshot")))
@@ -44,8 +44,21 @@ typedef struct Ragnarok_Epoll_Event_Set
   
 typedef struct epoll_event scm_rag_epoll_event;
 
-extern scm_t_bits rag_event_tag;
-extern scm_t_bits rag_event_set_tag;
+SCM scm_ragnarok_epoll_init(SCM size);
+SCM scm_ragnarok_epoll_handler(SCM event_set_list ,SCM second ,SCM msecond);
+SCM scm_ragnarok_epoll_del_event(SCM meta_event ,SCM event_set);
+SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond);
+SCM scm_ragnarok_epoll_add_event(SCM meta_event ,SCM event_set);
+scm_sizet ragnarok_free_epoll_event_set(SCM ee_set);
+SCM scm_rag_epoll_event_set2scm(scm_rag_epoll_event_set *ees);
+static int ragnarok_print_epoll_event_set(SCM ees_smob ,SCM port,
+					  scm_print_state *pstate);
+SCM scm_make_epoll_event(SCM event_fd ,SCM oneshot);
+SCM scm_make_epoll_event_set(SCM size ,SCM type);
+static inline void rag_epoll_event_set_del_fd(scm_rag_epoll_event_set *ees ,int fd);
+static inline void rag_epoll_event_set_add_fd(scm_rag_epoll_event_set *ees ,int fd);
+
+
 
 
 #endif // End of __HAS_SYS_EPOLL_H__;

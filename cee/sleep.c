@@ -33,13 +33,13 @@ SCM scm_mmr_sleep(SCM second ,SCM msecond)
   long s = 0L;
   long ms = 0L;
 
-  SCM_VALIDATE_INT(1 ,second);
+  SCM_VALIDATE_NUMBER(1 ,second);
 
   s = scm_to_long(second);
   
   if(!SCM_UNBNDP(msecond))
     {
-      SCM_VALIDATE_INT(2 ,msecond);
+      SCM_VALIDATE_NUMBER(2 ,msecond);
       ms = scm_to_long(msecond);
     }
     

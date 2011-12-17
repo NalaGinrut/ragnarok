@@ -8,6 +8,6 @@ $(OBJ)/%.o: $(CEE)/%.c
 	@mkdir -p $(@D)
 	$(V)$(CC) $(CFLAGS) -O3 -c -o $@ $<
 
-$(OBJ)/libragnarok.so: $(cee-ofile)
+$(ceelib-ofile): $(cee-ofile)
 	@echo generating $@ ...
 	$(V)$(CC) $(LIBS) -o $@ $^

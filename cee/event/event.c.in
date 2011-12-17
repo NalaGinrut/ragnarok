@@ -1,3 +1,5 @@
+#ifndef __RAG_EVENT_C_IN__
+#define __RAG_EVENT_C_IN__
 /*	
  *  Copyright (C) 2011
  *	"Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
@@ -16,34 +18,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef HAVE_CONFIG_H
-#  include <config.h>
-#endif
-
-#include <libguile.h>
-#include <malloc.h>
-#include <string.h>
-#include <errno.h>
 #include "event.h"
 #include "rag_struct.h"
-
-#ifdef __HAS_SYS_EPOLL_H__
-#include "rag_epoll.h"
-#endif // End of __HAS_SYS_EPOLL_H__;
-
-#ifdef __HAS_SYS_KQUEUE_H__
-#include "rag_kqueue.h"
-#endif // End of __HAS_SYS_KQUEUE_H__;
-
-#ifndef __HAS_SYS_EPOLL_H__
-#ifndef __HAS_SYS_KQUEUE_H__
-#include "rag_select.h"
-#endif // End of !__HAS_SYS_KQUEUE_H__;
-#endif // End of !__HAS_SYS_EPOLL_H__;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 scm_t_bits rag_mevent_tag;
 
@@ -56,13 +32,8 @@ const char const *ragnarok_meta_status_string[] =
   {
     "WAIT" ,"BLOCK" ,"SLEEP" ,"DEAD" ,"READY" ,"CLEAR"
   };
-  
-static inline SCM scm_rag_meta_event2scm(ragnarok_meta_event event)
-{
-  SCM_RETURN_NEWSMOB(rag_mevent_tag ,event);
-}
 
-SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
+inline SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
 #define FUNC_NAME "ragnarok-make-meta-event"
 {
   int t;
@@ -102,11 +73,11 @@ SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
   ret->status = s;
   ret->core = (SCM*)c;
 
-  return scm_rag_meta_event2scm(ret);
+  RAG_RETURN_MEVENT2SCM(ret);
 }
 #undef FUNC_NAME
 
-SCM ragnarok_meta_event_p(SCM event)
+inline SCM ragnarok_meta_event_p(SCM event)
 #define FUNC_NAME "ragnarok-meta-event?"
 {
   return
@@ -137,7 +108,7 @@ int ragnarok_print_meta_event(SCM me_smob ,SCM port ,scm_print_state *pstate)
   return 1;
 }
 
-SCM ragnarok_clear_meta_event(SCM me_smob)
+inline SCM ragnarok_clear_meta_event(SCM me_smob)
 #define FUNC_NAME "ragnarok-clear-meta-event"
 {
   ragnarok_meta_event me = (ragnarok_meta_event)SCM_SMOB_DATA(me_smob);
@@ -146,7 +117,7 @@ SCM ragnarok_clear_meta_event(SCM me_smob)
   me->status = CLEAR;
   me->core = NULL;
 
-  return scm_rag_meta_event2scm(me);
+  RAG_RETURN_MEVENT2SCM(me);
 }
 #undef FUNC_NAME
   
@@ -157,7 +128,7 @@ scm_sizet ragnarok_free_meta_event(SCM me_smob)
   // NOTE: The second para 'size' is always ignored in Guile 2.x.
   scm_gc_free(me ,0 ,"meta-event");
 
-  return 0;	
+  return 0;
 }
 
 SCM_RAG_OBJ_GETTER(mevent ,type ,type ,scm_from_int);
@@ -192,51 +163,11 @@ void init_meta_event_type()
   SCM_MAKE_GSUBR_OBJ_SET(mevent ,core);
 }
   
-SCM scm_ragnarok_event_handler(SCM event_set_list ,SCM second ,SCM msecond)
-#define FUNC_NAME "ragnarok-event-handler"
-{
-  /* NOTE: timeval is variable while type is different.
-   *  SLEEP -> delay time;
-   *  READY -> timeout;
-   *  BLOCK -> timeout;
-   */
-  return RAGNAROK_EVENT_HANDLER(event_set_list ,second ,msecond);
-}
-#undef FUNC_NAME
-  
-SCM scm_ragnarok_event_add(SCM event ,SCM event_set)
-#define FUNC_NAME "ragnarok-event-add"
-{
-  return RAGNAROK_EVENT_ADD(event ,event_set);
-}
-#undef FUNC_NAME
-
-SCM scm_ragnarok_event_del(SCM event ,SCM event_set)
-#define FUNC_NAME "ragnarok-event-del"
-{
-  return RAGNAROK_EVENT_DEL(event ,event_set);
-}
-#undef FUNC_NAME
-
-SCM scm_ragnarok_event_init(SCM init_arg)
-#define FUNC_NAME "ragnarok-event-init"
-{
-  return RAGNAROK_EVENT_INIT(init_arg);
-}
-#undef FUNC_NAME
-  
 void init_event_module()
 {
   RAGNAROK_EVENT_MODULE_INIT();
 
   init_meta_event_type();
-
-  scm_c_define_gsubr("ragnarok-event-init" ,1 ,0 ,0 ,scm_ragnarok_event_init);
-  scm_c_define_gsubr("ragnarok-event-handler" ,2 ,2 ,0 ,scm_ragnarok_event_handler);
-  scm_c_define_gsubr("ragnarok-event-add" ,2 ,0 ,0 ,scm_ragnarok_event_add);
-  scm_c_define_gsubr("ragnarok-event-del" ,2 ,0 ,0 ,scm_ragnarok_event_del);
 }
   
-#ifdef __cplusplus
-}
-#endif
+#endif // End of __RAG_EVENT_C_IN__;

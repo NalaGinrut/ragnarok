@@ -56,14 +56,14 @@ extern scm_t_bits rag_mevent_tag;
 
 #define RAG_GET_FD_CORE(mevent) (*(int*)((mevent)->core))
 
-#define RAG_ME_GET_TYPE(me) \
+static inline void
+RAG_ME_PRN_CORE(ragnarok_meta_event me ,SCM port) __attribute__((always_inline));
+
+#define RAG_ME_GET_TYPE(me)			\
   ragnarok_meta_type_string[(me)->type]
 
 #define RAG_ME_GET_STATUS(me) \
   ragnarok_meta_status_string[(me)->status]
-
-static inline void
-RAG_ME_PRN_CORE(ragnarok_meta_event me ,SCM port) __attribute__((always_inline));
 
 static inline void RAG_ME_PRN_CORE(ragnarok_meta_event me ,SCM port)
 {
@@ -80,5 +80,15 @@ static inline void RAG_ME_PRN_CORE(ragnarok_meta_event me ,SCM port)
       scm_puts("UNKNOWN meta event core" ,port);
     }
 }
+
+#define RAG_RETURN_MEVENT2SCM(me) SCM_RETURN_NEWSMOB(rag_mevent_tag ,me)
+
+SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core);
+SCM ragnarok_meta_event_p(SCM event);
+int ragnarok_print_meta_event(SCM me_smob ,SCM port ,scm_print_state *pstate);
+SCM ragnarok_clear_meta_event(SCM me_smob);
+scm_sizet ragnarok_free_meta_event(SCM me_smob);
+void init_meta_event_type();
+void init_event_module();
 
 #endif // End of __RAGNAROK_EVENT_H__;

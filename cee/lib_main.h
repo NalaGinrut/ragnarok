@@ -28,7 +28,4 @@ SCM scm_mmr_fork();
 SCM scm_mmr_gcrypt_mda(SCM ori_str ,SCM algo);
 SCM scm_mmr_sleep(SCM second ,SCM msecond);
 
-// modules
-void init_event_module();
-
 #endif // End of __RAGNAROK_LIB_MAIN_H__;

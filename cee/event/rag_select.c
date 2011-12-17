@@ -43,7 +43,7 @@ scm_t_bits scm_rag_select_event_set_tag;
 static SCM scm_rag_select_event_set2scm(scm_rag_epoll_event_set *event_set,
 					ses_type type)
 {
-  return SCM_RETURN_NEWSMOB(scm_rag_select_event_set_tag ,event_set);
+  SCM_RETURN_NEWSMOB(scm_rag_select_event_set_tag ,event_set);
 }
 
 static int scm_print_rag_select_event_set(SCM event_set_smob ,SCM port,
@@ -72,9 +72,9 @@ SCM scm_make_select_event_set(SCM nfds ,SCM size ,SCM type)
   unsigned int n = 0;
   int fd;
   
-  SCM_VALIDATE_INT(1 ,nfds);
-  SCM_VALIDATE_INT(2 ,size);
-  SCM_VALIDATE_INT(3 ,type);
+  SCM_VALIDATE_NUMBER(1 ,nfds);
+  SCM_VALIDATE_NUMBER(2 ,size);
+  SCM_VALIDATE_NUMBER(3 ,type);
   
   t = scm_to_int(type);
   n = scm_to_uint(size);
@@ -112,19 +112,19 @@ SCM scm_ragnarok_select(SCM nfds ,SCM read_set ,SCM write_set,
   SCM ret = SCM_EOL;
   SCM *prev = &ret;
 
-  SCM_VALIDATE_INT(1 ,nfds);
+  SCM_VALIDATE_NUMBER(1 ,nfds);
   SCM_ASSERT_EVENT_SET(read_set);
   SCM_ASSERT_EVENT_SET(write_set);
   SCM_ASSERT_EVENT_SET(except_set);
 
   if(!SCM_UNBNDP(ms))
     {
-      SCM_VALIDATE_INT(5 ,second);
+      SCM_VALIDATE_NUMBER(5 ,second);
       s = (long)scm_from_long(second);
 
       if(!SCM_UNBNDP(msecond))
 	{
-	  SCM_VALIDATE_INT(6 ,msecond);
+	  SCM_VALIDATE_NUMBER(6 ,msecond);
 	  ms = (long)scm_from_long(msecond);
 	}
     }
@@ -159,7 +159,7 @@ SCM scm_FD_CLR(SCM fd ,SCM set)
   fd_set *fset = NULL;
 
   SCM_ASSERT_FD_SET(set);
-  SCM_VALIDATE_INT(1 ,fd);
+  SCM_VALIDATE_NUMBER(1 ,fd);
 
   cfd = scm_from_int(fd);
   fset = (fd_set*)SMOB_DATA(set);
@@ -177,7 +177,7 @@ SCM scm_FD_ISSET(SCM fd ,SCM set);
   fd_set *fset = NULL;
 
   SCM_ASSERT_FD_SET(set);
-  SCM_VALIDATE_INT(1 ,fd);
+  SCM_VALIDATE_NUMBER(1 ,fd);
 
   cfd = scm_from_int(fd);
   fset = (fd_set*)SMOB_DATA(set);
@@ -193,7 +193,7 @@ n  int cfd = 0;
   fd_set *fset = NULL;
 
   SCM_ASSERT_FD_SET(set);
-  SCM_VALIDATE_INT(1 ,fd);
+  SCM_VALIDATE_NUMBER(1 ,fd);
 
   cfd = scm_from_int(fd);
   fset = (fd_set*)SMOB_DATA(set);
@@ -343,8 +343,16 @@ void rag_select_init()
 
   SCM_MAKE_GSUBR_OBJ_GET(event_set ,nfds);
   SCM_MAKE_GSUBR_OBJ_SET(event_set ,nfds);
+
+  // event module interface
+  scm_c_define_gsubr("ragnarok-event-init" ,1 ,0 ,0 ,RAGNAROK_EVENT_INIT);
+  scm_c_define_gsubr("ragnarok-event-handler" ,1 ,2 ,0 ,RAGNAROK_EVENT_HANDLER);
+  scm_c_define_gsubr("ragnarok-event-add" ,2 ,0 ,0 ,RAGNAROK_EVENT_ADD);
+  scm_c_define_gsubr("ragnarok-event-del" ,2 ,0 ,0 ,RAGNAROK_EVENT_DEL);
 }
 
+#include "event.c.in"
+  
 #ifdef __cplusplus
 }
 #endif

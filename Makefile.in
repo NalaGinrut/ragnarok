@@ -6,6 +6,9 @@ LDFLAGS := @GUILE_LDFLAGS@ -fPIC -shared
 CC := @CC@
 OBJ := obj
 CEE := cee
+ceelib-ofile := $(OBJ)/libragnarok.so
+EVENT := $(CEE)/event
+eventlib-ofile := $(OBJ)/libragnarok-event.so
 MOD := ragnarok
 MOD_OBJ := $(OBJ)/ragnarok
 BIN_OBJ := $(OBJ)/bin
@@ -26,7 +29,8 @@ mod-sfile := $(shell find $(MOD) -name *.scm)
 mod-ofile := $(mod-sfile:.scm=.scm.go)
 mod-ofile := $(subst $(MOD)/,$(MOD_OBJ)/,$(mod-ofile))
 
-ALL_TARGETS :=  $(OBJ)/libragnarok.so \
+ALL_TARGETS :=  $(ceelib-ofile) \
+		$(eventlib-ofile) \
 		version \
 		modules \
 		$(OBJ)/bin/ragnarok
@@ -34,8 +38,9 @@ ALL_TARGETS :=  $(OBJ)/libragnarok.so \
 all: $(ALL_TARGETS)
 
 include $(CEE)/Makefile.mk
+include $(EVENT)/Makefile.mk
 
-$(MOD_OBJ)/%.scm.go: $(MOD)/%.scm $(OBJ)/libragnarok.so
+$(MOD_OBJ)/%.scm.go: $(MOD)/%.scm $(ceelib-ofile) $(eventlib-ofile)
 	@echo + guilec $<
 	@mkdir -p $(@D)
 	$(V)$(GUILEC) -L $(TOP) -o $@ $<
@@ -55,7 +60,10 @@ clean:
 	-rm -frd *.log
 	-rm -rf autom4te.cache
 	-rm -rf $(MOD)/version.scm
-	-rm -rf config.h
+
+clean-config:
+	-rm -rf config.{h,log}
+	-rm -rf configure
 
 install: $(ALL_TARGETS)
 	cp -frdp $(OBJ)/*.so /usr/local/lib/
@@ -66,7 +74,7 @@ install: $(ALL_TARGETS)
 	$(INSTALL) -m 755 $(OBJ)/bin/* $(PREFIX)/bin
 	cp -frdp $(RAGNAROK_ETC) /etc
 
-distclean: distclean-mk clean
+distclean: distclean-mk clean clean-config
 
 distclean-mk:
 	-rm -f Makefile
