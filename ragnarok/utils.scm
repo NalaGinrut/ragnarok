@@ -259,3 +259,10 @@
     ((_ obj)
      (object->string obj display))))
 
+(define read-count 
+  (lambda (port num) 
+    (let lp ([n num] [ret '()])
+      (if (or (= n 0) (eof-object? (peek-char port))) 
+	  (apply string (reverse ret)) 
+	  (lp (1- n) (cons (read-char port) ret))
+	  ))))
