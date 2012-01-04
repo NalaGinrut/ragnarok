@@ -13,7 +13,13 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (ragnarok utils))
+(define-module (ragnarok utils)
+  #:autoload (srfi srfi-1) (iota)
+  #:autoload (rnrs base) (div-and-mod)
+  #:autoload (rnrs bytevectors) (string->utf8 bytevector-length)
+  #:autoload (rnrs io ports) (get-bytevector-all get-string-all)
+  #:use-module (ice-9 regex)
+  )
 
 (module-export-all! (current-module))
 
@@ -23,16 +29,6 @@
 (define F_LOCK  1)	;; a region for exclusive use.  
 (define F_TLOCK 2)	;; and lock a region for exclusive use.
 (define F_TEST  3)	;; a region for other processes locks. 
-
-(define div-and-mod (@ (rnrs base) div-and-mod))
-
-(define string->utf8 (@ (rnrs bytevectors) string->utf8))
-
-(define get-bytevector-all (@ (rnrs io ports) get-bytevector-all))
-
-(define get-string-all (@ (rnrs io ports) get-string-all))
-
-(define bytevector-length (@ (rnrs bytevectors) bytevector-length))
 
 (define get-config hash-ref)
 
@@ -90,7 +86,7 @@
   (syntax-rules ()
     ((_ str . opt)
      (let ([i (space-skip str . opt)])
-       (string-copy str i (string-contains str " " (1+ i))))
+       (substring/shared str i (string-contains str " " (1+ i))))
      ))) 
 
 (define-syntax get-word-list
@@ -169,8 +165,8 @@
 (define-syntax get-file-ext		  
   (syntax-rules ()
     ((_ filename)
-     (string-copy filename
-		  (1+ (string-index-right filename #\.)))
+     (substring/shared filename
+		       (1+ (string-index-right filename #\.)))
      )))
 
 (define-syntax get-request-mime
@@ -266,3 +262,18 @@
 	  (apply string (reverse ret)) 
 	  (lp (1- n) (cons (read-char port) ret))
 	  ))))
+
+(define* (regexp-split regex str #:optional (flags 0))
+  (let ((ret (fold-matches 
+	      regex str (list '() 0 str)
+	      (lambda (m prev)
+		(let* ((ll (car prev))
+		       (start (cadr prev))
+		       (tail (match:suffix m))
+		       (end (match:start m))
+		       (s (substring/shared str start end))
+		       (groups (map (lambda (n) (match:substring m n))
+				    (iota (1- (match:count m))))))
+		  (list `(,@ll ,s ,@groups) (match:end m) tail)))
+	      flags)))
+    `(,@(car ret) ,(caddr ret))))

@@ -15,8 +15,16 @@
 
 (define-module (ragnarok error)
   #:use-module (ragnarok utils)
-  #:export (ragnarok-try)
+  #:export (ragnarok-try ragnarok-throw)
   )
+
+(define *ragnarok-error-symbol* 'ragnarok-error)
+
+(define-syntax ragnarok-throw
+  (syntax-rules ()
+    ((_ msg)
+     (throw *ragnarok-error-symbol* msg))
+    ))
 
 (define-syntax ragnarok-try
   (syntax-rules (catch throw final)

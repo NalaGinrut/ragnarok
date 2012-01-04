@@ -69,7 +69,7 @@
 	;; template parser
 	([tpl-parser
 	  (lambda args
-	    (let* ([str-in (apply string-copy `(,in-buf ,@args))]
+	    (let* ([str-in (apply substring/shared `(,in-buf ,@args))]
 		   [pos (car args)]
 		   [get-position
 		    (lambda (sign)
@@ -106,7 +106,7 @@
 	 ;; handle script display part
 	 [write-script-display-to-out-buf
 	  (lambda args
-	    (let ([script-in (apply string-copy `(,in-buf ,@args))])
+	    (let ([script-in (apply substring/shared `(,in-buf ,@args))])
 	      (format out-buf "~a" 
 		      (string-append 
 		       " (format *ragnarok-guile-cgi-outport* \"~a\" "
@@ -117,13 +117,13 @@
 	 ;; handle script part
 	 [write-script-to-out-buf
 	  (lambda args
-	    (let ([script-in (apply string-copy `(,in-buf ,@args))])
+	    (let ([script-in (apply substring/shared `(,in-buf ,@args))])
 	      (format out-buf "~a" script-in)
 	      ))]
 	 ;; handle html part
 	 [write-html-to-out-buf
 	  (lambda args
-	    (let ([html-str (apply string-copy `(,in-buf ,@args))])
+	    (let ([html-str (apply substring/shared `(,in-buf ,@args))])
 	      (format out-buf "~a"
 		      (string-append 
 		       " (format *ragnarok-guile-cgi-outport* \"~a\" " 
