@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -15,8 +15,8 @@
 
 (define-module (ragnarok event)
   #:use-module (ragnarok utils)
+  #:use-module (ragnarok error)
   #:use-module (srfi srfi-9)
-  #:export ()
   )
 
 (module-export-all! (current-module))
@@ -35,15 +35,60 @@
 ;;        Then I could igore this operation. Anyway, it's a thread, and it'll be 
 ;;        over soon. (Consider the thread creating overhead, this must optimze later)
 
+(define ragnarok-do-with-events
+  (lambda (event-list event-set op)
+    (for-each (lambda (e)
+		(op e event-set))
+	      event-list)))
+
 (define ragnarok-kickout-events
-  (lambda (event-list event-set)
-    ;; TODO: del every event of event-list from event-set
-    #t
-    ))
+  (lambda (del-list event-set)
+    "del every event of del-list from event-set"
+    (ragnarok-do-with-events del-list 
+			     event-set
+			     ragnarok-event-del)))
 
 (define ragnarok-follow-events
-  (lambda (event-list event-set)
-    ;; TODO: add every event of event-list from event-set
-    #t
-    ))
+  (lambda (add-list event-set)
+    "add every event of event-list from event-set"
+    (ragnarok-do-with-events add-list
+			     event-set
+			     ragnarok-event-add)))
+
+(define make-event-enum-indexer
+  (lambda (sl)
+    (enum-set-indexer (make-enumeration sl))))
+
+(define make-event-status-enum-indexer
+  (lambda (sl)
+    (make-event-status-enum-indexer sl)))
+
+(define *event-status-list*
+  '(wait block sleep dead ready clear unknown))
+
+(define event-status-index
+  (make-event-status-enum-indexer *event-status-list*))
+  
+(define make-event-type-enum-indexer
+  (lambda (tl)
+    (make-event-enum-indexer tl)))
+  
+(define *event-type-list*
+  '(read-fd write-fd err-msg unknown))
+
+(define event-type-index
+  (make-event-type-enum-indexer *event-type-list*))
+
+(define* (ragnarok-event-create #:key
+				(type 'unknown)
+				(status 'unknown)
+				(fd #f))
+  (if (or (not fd) (< fd 0))
+      (ragnarok-throw "invalid fd:~a~%" fd)
+      (ragnarok-make-meta-event (event-type-index type)
+				(event-status-index status)
+				fd)))
+
+(define-syntax-rule (ragnarok-event-from-socket socket type)
+  (ragnarok-event-create #:type type #:status 'ready #:fd socket))
 

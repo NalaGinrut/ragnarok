@@ -23,14 +23,14 @@
 
 scm_t_bits rag_mevent_tag;
 
-const char const *ragnarok_meta_type_string[] =
+static const char const *ragnarok_meta_type_string[] =
   {
     "READ_FD" ,"WRITE_FD" ,"ERR_MSG" ,"UNKNOWN"
   };
 
-const char const *ragnarok_meta_status_string[] =
+static const char const *ragnarok_meta_status_string[] =
   {
-    "WAIT" ,"BLOCK" ,"SLEEP" ,"DEAD" ,"READY" ,"CLEAR"
+    "WAIT" ,"BLOCK" ,"SLEEP" ,"DEAD" ,"READY" ,"CLEAR" ,"UNKNOWN"
   };
 
 inline SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)

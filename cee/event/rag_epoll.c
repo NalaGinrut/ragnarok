@@ -1,5 +1,5 @@
 /*	
- *  Copyright (C) 2011
+ *  Copyright (C) 2011-2012
  *	"Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
  
  *  This program is free software: you can redistribute it and/or modify
@@ -126,7 +126,7 @@ static int ragnarok_print_epoll_event_set(SCM ees_smob ,SCM port,
   scm_intprint((unsigned int)ees->size ,10 ,port);
   scm_puts(" count:" ,port);
   scm_intprint((unsigned int)ees->count ,10 ,port);
-  scm_puts(" >", port);
+  scm_puts(" >" ,port);
   
   return 1;
 }
