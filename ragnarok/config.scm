@@ -64,6 +64,7 @@
     (charset ,type:string)
     (cgi ,type:bool)
     (with-cgi ,type:sym-list)
+    (eip ,type:string) ;; eip is the absolute path of the runnable program
     ))
 
 (define verify-key-val

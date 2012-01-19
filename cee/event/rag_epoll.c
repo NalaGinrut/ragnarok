@@ -71,7 +71,6 @@ static inline void rag_epoll_event_set_add_fd(scm_rag_epoll_event_set *ees ,int 
     ees->fd_set[i] = fd;
 
   ees->count++;
-  return;
 }
 
 static inline void rag_epoll_event_set_del_fd(scm_rag_epoll_event_set *ees ,int fd)
@@ -92,8 +91,6 @@ static inline void rag_epoll_event_set_del_fd(scm_rag_epoll_event_set *ees ,int 
 
       i++;
     }
-  
-  return;
 }
 
 scm_sizet ragnarok_free_epoll_event_set(SCM ee_set)
