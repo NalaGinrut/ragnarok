@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -277,3 +277,13 @@
 		  (list `(,@ll ,s ,@groups) (match:end m) tail)))
 	      flags)))
     `(,@(car ret) ,(caddr ret))))
+
+(define timeout:second car)
+(define timeout:msecond cdr)
+(define format-timeout
+  (lambda (timeout)
+    (call-with-values
+	(lambda ()
+	  (div-and-mod timout 1000))
+      (lambda (second msecond)
+	(cons second msecond)))))

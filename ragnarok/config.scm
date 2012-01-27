@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -65,6 +65,8 @@
     (cgi ,type:bool)
     (with-cgi ,type:sym-list)
     (eip ,type:string) ;; eip is the absolute path of the runnable program
+    (max-events ,type:integer)
+    (timeout ,type:integer)
     ))
 
 (define verify-key-val

@@ -39,11 +39,12 @@
 	 [target (eips:target eips)]
 	 [conn-socket (protocol:conn-socket eips)]
 	 )
-
+    
+    ;; DON'T use "access?" ,and we can use exception throw
     (cond
      ((not (file-exists? target))
       (ragnarok-throw "target: ~a doesn't exist!~%" target))
-     ((not (check-file-perms target #o555)) ;; DON'T use "access?"
+     ((not (check-file-perms target #o555)) 
       (ragnarok-throw "target: ~a doesn't have X permission!~%" target)))
 
     ;; set charset
@@ -52,7 +53,7 @@
 
     (cond 
      ((< i 0)
-      (values #f *Fork-Error* #f))
+      (ragnarok-throw "Fork error!~%"))
      ((= i 0)
       (setvbuf w _IONBF) ;; set to block buffer
       (redirect-port w (current-output-port))
@@ -62,7 +63,7 @@
       (close (current-output-port))
       ))
     
-    ;; NOTE: parent must wait child terminate, 
+    ;; NOTE: parent must wait for child terminate, 
     ;;       or get-bytevector-all will be blocked.
     (ragnarok-waitpid i)
     

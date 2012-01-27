@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -28,12 +28,24 @@
 
 (define-syntax ragnarok-try
   (syntax-rules (catch throw final)
-    ((_ *thunk* catch *exception* throw *handler*)
+    ((_ *thunk* catch *exception* do *handler*)
      (catch *exception* *thunk* *handler*))
-    ((_ *thunk1* catch *exception* throw *handler* final *thunk2*)
+    ((_ *thunk1* catch *exception* do *handler* final *thunk2*)
      (catch *exception* *thunk1* (lambda (k . e)
 				   (*handler* k e)
 				   (*thunk2*))))
     ))
-	    
 
+(define-syntax format-error-msg
+  (syntax-rules ()
+    ((_ fmt)
+     (string-append "[error] " fmt))))
+
+(define ragnarok-print-error-msg
+  (lambda (k . e)
+    (apply format #t `(,(format-error-msg (car e)) ,@(cdr e)))))
+ 
+(define ragnarok-error-converter
+  (lambda (msg . info)
+    (lambda (k . e)
+      (ragnarok-throw msg info))))

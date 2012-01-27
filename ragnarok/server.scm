@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -23,12 +23,16 @@
   #:use-module (ragnarok utils)
   #:use-module (ragnarok info)
   #:use-module (ragnarok threads)
+  #:use-module (ragnarok event)
+  #:use-module (ragnarok posix)
   #:use-module (ragnarok version)
   #:export (<server>
 	    server:socket server:config server:handler
 	    server:logger server:run server:show-config
 	    server:get-config server:down
 	    server:print-start-info
+	    server:init-event-system
+	    server:add-to-env
 	    )
   )
 
@@ -41,6 +45,11 @@
   (config #:accessor server:config)
   (handler #:accessor server:handler)
   (logger #:accessor server:logger)
+  (read-set #:accessor server:read-set)
+  (write-set #:accessor server:write-set)
+  (except-set #:accessor server:except-set)
+  (timeout #:init-value #f server:timeout)
+  (ready-list #:init-value #f server:ready-list)
   )
 
 (define-method (initialize (self <server>) initargs)
@@ -49,6 +58,7 @@
 	 [name (server:name self)]
 	 [config (get-sub-server-conf-table name)]
 	 [status-show (hash-ref config 'status-show)]
+	 [timeout (hash-ref config 'timeout)]
 	 [logger (make <logger> `(status-show ,status-show) '())]
 	 [protocol (hash-ref config 'protocol)]
 	 [handler (get-handler handler-list protocol)]
@@ -58,11 +68,15 @@
     (set! (server:handler self) handler)
     (set! (env:handler-list self) handler-list)
 
-    ;; update env's servers list
-    (add-to-list! (env:server-list self) 
-		  (string->symbol name)
-		  self)
+    (if timeout
+	(set! (server:timeout self) (format-timeout timeout)))
 
+    ;; update env's servers list
+    (server:add-to-env self)
+
+    ;; init subserver event system
+    (server:init-event-system self)
+     
     (if handler
 	(set! (server:handler self) handler)
 	(error initialize "<server>: protocol hasn't been implemented yet!" protocol))
@@ -76,10 +90,10 @@
     (hash-ref conf var)))
 
 (define-method (server:print-start-info (self <server>))
-  (let* ([sname (server:name self)]
-	 [proto (server:get-config self 'protocol)]
-	 [port (server:get-config self 'listen)]
-	 )
+  (let ([sname (server:name self)]
+	[proto (server:get-config self 'protocol)]
+	[port (server:get-config self 'listen)]
+	)
     (ragnarok-exclusive-try
      (format #t "*Starting [~a] ...~%" sname)
      (format #t "  [~a] is ~a server which's listenning in port ~a~%"
@@ -123,27 +137,37 @@
     ;; response loop
     (let active-loop ()
       (if (not (port-closed? s))
-	  (let* ([client-connection (accept s)]
-		 [conn-socket (car client-connection)]
-		 [client-details (cdr client-connection)]
-		 )
-	    ;; FIXME: checkout the validity
-	    (server:print-status self 
-				 'client-info 
-				 (get-client-info client-details))
+	  (if (not (server:wait-for-listen-port-ready self))
+	      (yield) ;; if no request then yield this thread 
+	      (let* ([client-connection (ragnarok-accept s)]
+		     [conn-socket (car client-connection)]
+		     [client-details (cdr client-connection)]
+		     )
+		;; FIXME: checkout the validity
+		(server:print-status self 
+				     'client-info 
+				     (get-client-info client-details))
 
-	    ;; deal with request in new thread
-	    (ragnarok-call-with-new-thread
-	     (lambda ()
-	       ;; FIXME: I need to spawn new thread for a request-handler
-	       (request-handler logger client-connection subserver-info)
-	       (shutdown conn-socket 2) ;; can be closed after trans finished.
-	       (close-port conn-socket)      
-	       (logger:sync logger)
-	       ))
+		;; TODO: 1. add conn-socket into write-set
+		;;       2. deal with aio
+		;;       3. del conn-socket from write-set after closed
+		;; (server:add-event self (port->fdes conn-socket))
 
-	    (active-loop)
-	    )
+		;; deal with request in new thread
+		;; FIXME: we need thread pool! I'll do it later.
+		(ragnarok-call-with-new-thread
+		 (lambda ()
+		   (request-handler logger client-connection subserver-info)
+		   (shutdown conn-socket 2) ;; can be closed after trans finished.
+		   (close-port conn-socket)      
+		   (logger:sync logger)
+		   ))
+		
+		(active-loop) ;; do loop in normal situation
+		) ;; end (let* ([client-connection
+	      ) ;; end (if (not (server:wait-for-listen-port-ready
+	  
+	  ;; if socket is closed ,quit loop
 	  ))))
 
 (define get-client-info
@@ -155,7 +179,8 @@
       (format #f "Get request from ~a, client port: ~a~%" ip port)
       )))
 
-;; for more generilzation, we pass info as non-type arg
+;; TODO:
+;; for more general, we pass info as non-type arg
 ;; and one may handle it with a custom printer
 (define-method (server:print-status 
 		(self <server>) (type <symbol>) (info <string>))
@@ -163,19 +188,94 @@
 	 [time (msg-time-stamp)]
 	 [msg (make-log-msg time type info)]
 	 )
-    ;; TODO: It MUST BE an exclusive logger file accession.
     (logger:printer logger msg)))
     
 ;; listen in the port then return the socket
-(define-method (server:listen-port (self <server>) port)
-  (if (not port)
-      (error "Listen port isn't specified!" (server:name self)))
-  (let* ([s (socket PF_INET SOCK_STREAM 0)]
-	 [max-req (server:get-config self 'max-request)]
-	 )
-    (setsockopt s SOL_SOCKET SO_REUSEADDR 1)
-    (bind s AF_INET INADDR_ANY port)
-    (listen s max-req)
-    (set! (server:listen-socket self) s)
-    s
+(define-method (server:listen-port (self <server>) (port <port>))
+  (ragnarok-catch-context
+   (lambda ()
+     (let ([s (socket PF_INET SOCK_STREAM 0)]
+	   [max-req (server:get-config self 'max-request)]
+	   )
+       (setsockopt s SOL_SOCKET SO_REUSEADDR 1)
+       (ragnarok-bind s AF_INET INADDR_ANY port)
+       (ragnarok-listen s max-req)
+       (set! (server:listen-socket self) s)
+       s
+       ))
+   ragnarok-print-error-msg))
+
+(define-method (server:init-event-system (self <server>))
+  (let ([max-events (server:get-config self 'max-events)])
+    (ragnarok-catch-context
+     (lambda ()
+       (call-with-values
+	   (lambda ()
+	     (if (<= max-events 0)
+		 (ragnarok-throw "invalid max-events: ~a~%" max-events)
+		 (ragnarok-event-init max-events)))
+	 (lambda (rs ws es)
+	   (set! (server:read-set self) rs)
+	   (set! (server:write-set self) ws)
+	   (set! (server:except-set self) es))))
+     ragnarok-print-error-msg)))
+
+(define-method (server:wait-for-listen-port-ready (self <server>))
+  (let ([ready-list (server:update-ready-list self)]
+	[socket (server:socket self)]
+	)
+    (if (null? ready-list)
+	#f ;; if no event then return #f
+	(call/cc
+	 (lambda (return)
+	   (for-each 
+	    (lambda (fd)
+	      (if (= (port->fdes socket) fd)
+		  (return #t)))
+	    ready-list)
+	   #f ;; if listen socket isn't ready then return #f 
+	   )) ;; end call/cc
+	)))
+
+(define-method (server:update-ready-list (self <server>))
+  (let ([ready-list (server:get-request-events self)])
+    (set! (server:ready-list self) ready-list)
+    ready-list
     ))
+	
+(define-method (server:get-request-events (self <server>))
+  (let ([read-set (server:read-set self)]
+	[write-set (server:write-set self)]
+	[except-set (server:except-set self)]
+	[timeout (server:timeout self)]
+	)
+    ;; NOTE: the order is important ,read&write&except
+    (ragnarok-catch-context
+     (lambda ()
+       (if timeout
+	   (ragnarok-event-handler `(,read-set ,write-set ,except-set)
+				   (timeout:second timeout)
+				   (timeout:msecond timeout))
+	   (ragnarok-event-handler `(,read-set ,write-set ,except-set)))
+       ))))
+
+(define-method (server:get-event-set (self <server>) (type <symbol>))
+  (ragnarok-catch-context
+   (lambda ()
+     (case type
+       ((read) (server:read-set self))
+       ((write) (server:write-set self))
+       ((except) (server:except-set self))
+       (else
+	(ragnarok-throw "invalid event-set type: ~a~%" type))))))
+
+(define-method (server:add-event (self <server>) (fd <integer>) (type <symbol>))
+  (let ([set (server:get-event-set self type)]
+	[event (ragnarok-event-create #:type type #:status 'ready #:fd fd)]
+	) 
+    (ragnarok-event-add event set)))
+
+(define-method (server:add-to-env (self <server>))
+  (add-to-list! (env:server-list self) 
+		(string->symbol (server:name self))
+		self))

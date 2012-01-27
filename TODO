@@ -13,6 +13,7 @@
 * Filter the target path, it should not appear '\n'
 
 * Use catch/throw to handle the error
+  + change error-page handler to catch-context
 
 ** deal with concurrent request
    Threads pool will be used in future version. It's not difficult but we just focus

@@ -42,7 +42,7 @@ static inline void rag_epoll_event_set_add_fd(scm_rag_epoll_event_set *ees ,int 
 {
   unsigned int i = 0;
 
-  // NOTE: this doesn't have to be exclusive, because redundent adding won't be harm.
+  // NOTE: this doesn't have to be exclusive, because redundent adding won't be harmful.
 
   // NOTE: this proc won't check event-set exceed situation.
 

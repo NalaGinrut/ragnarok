@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011-2012  
+;;  Copyright (C) 2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -13,17 +13,11 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (ragnarok hook)
-  #:export (hook-list-init)
+(define-module (ragnarok protocol eips hook)
+  #:export (init-hook)
   )
 
-(define *hook-list*
-  `((http ,(@ (ragnarok protocol http hook) init-hook))
-    (eips ,(@ (ragnarok protocol eips hook) init-hook))
-    ))
-
-(define (hook-list-init)
-  (for-each (lambda (hk)
-	      (apply (cadr hk) '()))
-	    *hook-list*))
+(define (init-hook)
+  ;; Insert whatever you want to do before a relative server run.
+  )
 

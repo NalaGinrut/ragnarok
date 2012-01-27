@@ -25,7 +25,7 @@ scm_t_bits rag_mevent_tag;
 
 static const char const *ragnarok_meta_type_string[] =
   {
-    "READ_FD" ,"WRITE_FD" ,"ERR_MSG" ,"UNKNOWN"
+    "READ" ,"WRITE" ,"EXCEPT" ,"UNKNOWN"
   };
 
 static const char const *ragnarok_meta_status_string[] =

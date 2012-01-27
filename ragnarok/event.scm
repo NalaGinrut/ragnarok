@@ -74,7 +74,7 @@
     (make-event-enum-indexer tl)))
   
 (define *event-type-list*
-  '(read-fd write-fd err-msg unknown))
+  '(read write except unknown))
 
 (define event-type-index
   (make-event-type-enum-indexer *event-type-list*))
@@ -90,5 +90,5 @@
 				fd)))
 
 (define-syntax-rule (ragnarok-event-from-socket socket type)
-  (ragnarok-event-create #:type type #:status 'ready #:fd socket))
+  (ragnarok-event-create #:type type #:status 'ready #:fd (port->fdes socket)))
 
