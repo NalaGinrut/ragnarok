@@ -1,11 +1,11 @@
 ;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
-;;  This program is free software: you can redistribute it and/or modify
+;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
 ;;  the Free Software Foundation, either version 3 of the License, or
 ;;  (at your option) any later version.
 
-;;  This program is distributed in the hope that it will be useful,
+;;  Ragnarok is distributed in the hope that it will be useful,
 ;;  but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;  GNU General Public License for more details.
@@ -25,6 +25,7 @@
   #:use-module (ragnarok threads)
   #:use-module (ragnarok event)
   #:use-module (ragnarok posix)
+  #:use-module (ragnarok error)
   #:use-module (ragnarok version)
   #:export (<server>
 	    server:socket server:config server:handler
@@ -35,6 +36,8 @@
 	    server:add-to-env
 	    )
   )
+
+(define *default-max-events* 32)
 
 (define-class <server> (<env>)
   ;; FIXME: support server name later. 
@@ -48,8 +51,8 @@
   (read-set #:accessor server:read-set)
   (write-set #:accessor server:write-set)
   (except-set #:accessor server:except-set)
-  (timeout #:init-value #f server:timeout)
-  (ready-list #:init-value #f server:ready-list)
+  (timeout #:init-value #f #:accessor server:timeout)
+  (ready-list #:init-value #f #:accessor server:ready-list)
   )
 
 (define-method (initialize (self <server>) initargs)
@@ -61,18 +64,26 @@
 	 [timeout (hash-ref config 'timeout)]
 	 [logger (make <logger> `(status-show ,status-show) '())]
 	 [protocol (hash-ref config 'protocol)]
+	 [max-events (hash-ref config 'max-events)]
 	 [handler (get-handler handler-list protocol)]
 	 )
+    ;; NOTE: init order is important!
+    ;;     1. init all properties
+    ;;     2. init event system
+    ;;     3. init handler
+    ;;     4. add subserver to env finally
+
     (set! (server:config self) config)
     (set! (server:logger self) logger)
     (set! (server:handler self) handler)
     (set! (env:handler-list self) handler-list)
 
+    ;; init max-events
+    (if (not max-events)
+	(hash-set! config 'max-events *default-max-events*))
+
     (if timeout
 	(set! (server:timeout self) (format-timeout timeout)))
-
-    ;; update env's servers list
-    (server:add-to-env self)
 
     ;; init subserver event system
     (server:init-event-system self)
@@ -80,6 +91,10 @@
     (if handler
 	(set! (server:handler self) handler)
 	(error initialize "<server>: protocol hasn't been implemented yet!" protocol))
+
+    ;; update env's servers list
+    (server:add-to-env self)
+
     ))
 
 (define-method (server:get-config (self <server>) var)
@@ -126,13 +141,20 @@
 	  (make-subserver-info server-port server-protocol
 			       server-name server-software
 			       server-charset server-root)]
-	 [s (server:listen-port self server-port)]
+	 [s (server:listen-in-port self server-port)]
 	 [request-handler (server:handler self)]
 	 [logger (server:logger self)]
 	 )
 
     ;; set listen-port to non-block
     (set-port-non-block! s)
+
+    ;; store listen-socket for later use
+    ;; FIXME: This step can provide 'changing listen port on the fly' feature.
+    ;;        But one should handle this listen-socket properly after it's closed.
+    ;;        I think set! listen-socket to #f immediatly after it was closed 
+    ;;        would be a good operation.
+    (set! (server:listen-socket self) s)
 
     ;; response loop
     (let active-loop ()
@@ -191,23 +213,22 @@
     (logger:printer logger msg)))
     
 ;; listen in the port then return the socket
-(define-method (server:listen-port (self <server>) (port <port>))
-  (ragnarok-catch-context
+(define-method (server:listen-in-port (self <server>) (port-fd <integer>))
+  (ragnarok-try
    (lambda ()
      (let ([s (socket PF_INET SOCK_STREAM 0)]
 	   [max-req (server:get-config self 'max-request)]
 	   )
        (setsockopt s SOL_SOCKET SO_REUSEADDR 1)
-       (ragnarok-bind s AF_INET INADDR_ANY port)
+       (ragnarok-bind s AF_INET INADDR_ANY port-fd)
        (ragnarok-listen s max-req)
        (set! (server:listen-socket self) s)
-       s
-       ))
-   ragnarok-print-error-msg))
+       s ;; return listen-socket
+       ))))
 
 (define-method (server:init-event-system (self <server>))
   (let ([max-events (server:get-config self 'max-events)])
-    (ragnarok-catch-context
+    (ragnarok-try
      (lambda ()
        (call-with-values
 	   (lambda ()
@@ -217,8 +238,7 @@
 	 (lambda (rs ws es)
 	   (set! (server:read-set self) rs)
 	   (set! (server:write-set self) ws)
-	   (set! (server:except-set self) es))))
-     ragnarok-print-error-msg)))
+	   (set! (server:except-set self) es)))))))
 
 (define-method (server:wait-for-listen-port-ready (self <server>))
   (let ([ready-list (server:update-ready-list self)]
@@ -250,7 +270,7 @@
 	[timeout (server:timeout self)]
 	)
     ;; NOTE: the order is important ,read&write&except
-    (ragnarok-catch-context
+    (ragnarok-try
      (lambda ()
        (if timeout
 	   (ragnarok-event-handler `(,read-set ,write-set ,except-set)
@@ -260,7 +280,7 @@
        ))))
 
 (define-method (server:get-event-set (self <server>) (type <symbol>))
-  (ragnarok-catch-context
+  (ragnarok-try
    (lambda ()
      (case type
        ((read) (server:read-set self))
