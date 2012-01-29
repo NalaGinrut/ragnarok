@@ -97,18 +97,6 @@
      (map string-trim-both (string-split str ch)))
     ))
 
-(define-syntax unless
-  (syntax-rules ()
-    ((_ test result1 result2 ...)
-     (if (not test) (begin result1 result2 ...)))))
-
-(define-syntax define-syntax-rule
-  (syntax-rules ()
-    ((_ (name . pattern) template)
-     (define-syntax name
-       (syntax-rules ()
-         ((_ . pattern) template))))))
-
 (define make-iterator
   (lambda (ll)
     (let ((rest ll))
