@@ -1,13 +1,13 @@
 /*	
- *  Copyright (C) 2011
+ *  Copyright (C) 2011-2012
  *	"Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
  
- *  This program is free software: you can redistribute it and/or modify
+ *  Ragnarok is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  
- *  This program is distributed in the hope that it will be useful,
+ *  Ragnarok is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -22,11 +22,11 @@
 #include "generic.h"
 
 typedef enum Meta_Event_Type 
-  { READ_FD = 0 ,WRITE_FD ,READ_EVENT ,WRITE_EVENT ,ERR_MSG ,UNKNOWN
+  { MET_READ = 0 ,MET_WRITE ,MET_EXCEPT ,MET_UNKNOWN
   }rag_met;
 
-typedef enum Meta_Event_Status 
-  { WAIT = 0 ,BLOCK ,SLEEP ,DEAD ,READY ,CLEAR
+typedef enum Meta_Event_Status
+  { MES_WAIT = 0 ,MES_BLOCK ,MES_SLEEP ,MES_DEAD ,MES_READY ,MES_CLEAR,
   }rag_mes;
 
 typedef struct Ragnarok_Meta_Event
@@ -69,12 +69,10 @@ static inline void RAG_ME_PRN_CORE(ragnarok_meta_event me ,SCM port)
 {
   switch(me->type)
     {		
-    case READ_FD:	
-    case WRITE_FD:	
+    case MET_READ:	
+    case MET_WRITE:
+    case MET_EXCEPT:
       scm_intprint(*(int*)me->core ,10 ,port);
-      break;
-    case ERR_MSG:
-      scm_puts((char*)me->core ,port);
       break;
     default:
       scm_puts("UNKNOWN meta event core" ,port);

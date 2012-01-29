@@ -1,11 +1,11 @@
 ;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
-;;  This program is free software: you can redistribute it and/or modify
+;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
 ;;  the Free Software Foundation, either version 3 of the License, or
 ;;  (at your option) any later version.
 
-;;  This program is distributed in the hope that it will be useful,
+;;  Ragnarok is distributed in the hope that it will be useful,
 ;;  but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;  GNU General Public License for more details.
@@ -17,6 +17,7 @@
   #:use-module (ragnarok utils)
   #:use-module (ragnarok error)
   #:use-module (srfi srfi-9)
+  #:autoload (rnrs) (enum-set-indexer)
   )
 
 (module-export-all! (current-module))
@@ -61,7 +62,7 @@
 
 (define make-event-status-enum-indexer
   (lambda (sl)
-    (make-event-status-enum-indexer sl)))
+    (make-event-enum-indexer sl)))
 
 (define *event-status-list*
   '(wait block sleep dead ready clear unknown))

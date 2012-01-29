@@ -1,11 +1,11 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
-;;  This program is free software: you can redistribute it and/or modify
+;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
 ;;  the Free Software Foundation, either version 3 of the License, or
 ;;  (at your option) any later version.
 
-;;  This program is distributed in the hope that it will be useful,
+;;  Ragnarok is distributed in the hope that it will be useful,
 ;;  but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;  GNU General Public License for more details.
@@ -73,9 +73,9 @@ God bless hacking.\n
 	  "
 ~a. 
 
-Copyright (C) 2011 Mu Lei known as \"NalaGinrut\" <NalaGinrut@gmail.com>
+Copyright (C) 2011-2012 Mu Lei known as \"NalaGinrut\" <NalaGinrut@gmail.com>
 License LGPLv3+: GNU LGPL 3 or later <http://gnu.org/licenses/lgpl.html>.
-This is free software: you are free to change and redistribute it.
+Ragnarok is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 
 God bless hacking."
