@@ -2,12 +2,12 @@
  *  Copyright (C) 2011-2012
  *	"Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
  
- *  This program is free software: you can redistribute it and/or modify
+ *  Ragnarok is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  
- *  This program is distributed in the hope that it will be useful,
+ *  Ragnarok is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -38,6 +38,37 @@ scm_t_bits rag_epoll_event_set_tag;
 #define SCM_ASSERT_EPOLL_EVENT_SET(x) \
   scm_assert_smob_type(rag_epoll_event_set_tag ,(x))
 
+  /* NOTE: I don't check type in this function since it's no need to
+   *	   do this check twice. And one SHOULD ONLY use this function
+   *	   just one time in scm_ragnarok_epoll_handler.
+   */
+static inline SCM rag_epoll_set_append(SCM read_set ,SCM write_set)
+{
+  scm_rag_epoll_event_set *res = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(read_set);
+  scm_rag_epoll_event_set *wes = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(write_set);
+  int rn = res->size;
+  int wn = wes->size;
+  SCM size = scm_from_int(rn + wn);
+  SCM event_set = scm_make_epoll_event_set(size ,SCM_RAG_WRITE);
+  scm_rag_epoll_event_set *es = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(event_set);
+
+  /* NOTE: I can't use -std=c99 in Ragnarok since I've already written too many
+   *	   C99-incompatible code. So an ugly pre-declared variables here.
+   */
+  int i,j; 
+  
+  /* FIXME: I wish these two 'for's can be optimized to parallelize.
+   *	    But I'm not sure about it.
+   */
+  for(i=0 ;i<rn ;i++)
+    es->fd_set[i] = res->fd_set[i];
+
+  for(j=rn ;j<wn ;j++)
+    es->fd_set[j] = wes->fd_set[j];
+
+  return event_set;
+}
+  
 static inline void rag_epoll_event_set_add_fd(scm_rag_epoll_event_set *ees ,int fd)
 {
   unsigned int i = 0;
@@ -268,6 +299,7 @@ SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
   SCM *prev = &ret;
   
   SCM_ASSERT_EPOLL_EVENT_SET(event_set);
+  es = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(event_set);
 
   if(!SCM_UNBNDP(second))
     {
@@ -286,7 +318,6 @@ SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
   ms = ms ? ms : -1;
 
   count = es->count;
-  es = (scm_rag_epoll_event_set*)SMOB_DATA(event_set);
   tmp_set =
     (struct epoll_event*)scm_gc_malloc(count*sizeof(struct epoll_event) ,"epoll_set");
   
@@ -358,7 +389,11 @@ SCM scm_ragnarok_epoll_handler(SCM event_set_list ,SCM second ,SCM msecond)
   SCM_ASSERT_EPOLL_EVENT_SET(read_set);
   SCM_ASSERT_EPOLL_EVENT_SET(write_set);
 
-  event_set = scm_append(scm_list_2(read_set ,write_set));
+  /* FIXME: I believe this 'append' operation is not the best solution.
+   *	    It's redundant to create a new event_set then append read/write set.
+   *	    Maybe I should write a more effective solution.
+   */
+  event_set = rag_epoll_set_append(read_set ,write_set);
   
   return scm_ragnarok_epoll_wait(event_set ,second ,msecond);
 }

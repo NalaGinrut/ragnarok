@@ -1,13 +1,13 @@
 /*	
- *  Copyright (C) 2011
+ *  Copyright (C) 2011-2012
  *	"Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
  
- *  This program is free software: you can redistribute it and/or modify
+ *  Ragnarok is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  
- *  This program is distributed in the hope that it will be useful,
+ *  Ragnarok is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -57,7 +57,7 @@ SCM scm_make_epoll_event(SCM event_fd ,SCM oneshot);
 SCM scm_make_epoll_event_set(SCM size ,SCM type);
 static inline void rag_epoll_event_set_del_fd(scm_rag_epoll_event_set *ees ,int fd);
 static inline void rag_epoll_event_set_add_fd(scm_rag_epoll_event_set *ees ,int fd);
-
+static inline SCM rag_epoll_set_append(SCM read_set ,SCM write_set);
 
 
 
