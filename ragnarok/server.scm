@@ -28,7 +28,7 @@
   #:use-module (ragnarok error)
   #:use-module (ragnarok version)
   #:export (<server>
-	    server:socket server:config server:handler
+	    server:listen-socket server:config server:handler
 	    server:logger server:run server:show-config
 	    server:get-config server:down
 	    server:print-start-info
@@ -38,6 +38,7 @@
   )
 
 (define *default-max-events* 32)
+(define *default-triger* 'level-triger)
 
 (define-class <server> (<env>)
   ;; FIXME: support server name later. 
@@ -65,6 +66,7 @@
 	 [logger (make <logger> `(status-show ,status-show) '())]
 	 [protocol (hash-ref config 'protocol)]
 	 [max-events (hash-ref config 'max-events)]
+	 [triger (hash-ref config 'triger)]
 	 [handler (get-handler handler-list protocol)]
 	 )
     ;; NOTE: init order is important!
@@ -156,6 +158,9 @@
     ;;        would be a good operation.
     (set! (server:listen-socket self) s)
 
+    ;; add listen-socket into read-set
+    (server:add-event self (port->fdes s) 'level-triger 'read)
+
     ;; response loop
     (let active-loop ()
       (if (not (port-closed? s))
@@ -242,16 +247,17 @@
 
 (define-method (server:wait-for-listen-port-ready (self <server>))
   (let ([ready-list (server:update-ready-list self)]
-	[socket (server:socket self)]
+	[socket (server:listen-socket self)]
 	)
     (if (null? ready-list)
 	#f ;; if no event then return #f
 	(call/cc
 	 (lambda (return)
 	   (for-each 
-	    (lambda (fd)
-	      (if (= (port->fdes socket) fd)
-		  (return #t)))
+	    (lambda (pair)
+	      (let ([fd (car pair)])
+		(if (= (port->fdes socket) fd)
+		    (return #t))))
 	    ready-list)
 	   #f ;; if listen socket isn't ready then return #f 
 	   )) ;; end call/cc
@@ -289,11 +295,26 @@
        (else
 	(ragnarok-throw "invalid event-set type: ~a~%" type))))))
 
-(define-method (server:add-event (self <server>) (fd <integer>) (type <symbol>))
+(define-method (server:add-event (self <server>) (fd <integer>) 
+				 (triger <symbol>) (type <symbol>))
   (let ([set (server:get-event-set self type)]
-	[event (ragnarok-event-create #:type type #:status 'ready #:fd fd)]
+	[event (ragnarok-event-create #:type type #:status 'ready
+				      #:fd fd #:triger triger)]
 	) 
-    (ragnarok-event-add event set)))
+    (ragnarok-try
+     (lambda ()
+       (ragnarok-event-add event set)))))
+
+(define-method (server:add-event (self <server>) (fd <integer>) (triger <symbol>) 
+				 (type <symbol>) (oneshot <boolean>))
+  (let ([set (server:get-event-set self type)]
+	[event (ragnarok-event-create #:type type #:status 'ready 
+				      #:fd fd #:triger triger
+				      #:oneshot onshot)]
+	) 
+    (ragnarok-try
+     (lambda ()
+       (ragnarok-event-add event set)))))
 
 (define-method (server:add-to-env (self <server>))
   (add-to-list! (env:server-list self) 

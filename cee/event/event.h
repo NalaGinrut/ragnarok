@@ -1,3 +1,5 @@
+#ifndef __RAGNAROK_EVENT_H__
+#define __RAGNAROK_EVENT_H__
 /*	
  *  Copyright (C) 2011-2012
  *	"Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
@@ -16,9 +18,6 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RAGNAROK_EVENT_H__
-#define __RAGNAROK_EVENT_H__
-
 #include "generic.h"
 
 typedef enum Meta_Event_Type 
@@ -34,9 +33,10 @@ typedef struct Ragnarok_Meta_Event
   rag_met type;
   rag_mes status;
 
-  /* NOTE: mode is only between 'level-triger' and 'edge-triger'.
-           So only kqueue/epoll uses it. select/poll doesn't.
-	   And Ragnarok doesn't support poll.
+  /* NOTE: 1. mode contains 'level-triger' and 'edge-triger'.
+              So only kqueue/epoll uses it. select/poll doesn't.
+	      And Ragnarok doesn't support poll.
+	   2. epoll's op also contain in mode too.
   */
   int mode;
 

@@ -67,6 +67,7 @@
     (eip ,type:string) ;; eip is the absolute path of the runnable program
     (max-events ,type:integer)
     (timeout ,type:integer)
+    (triger ,type:symbol)
     ))
 
 (define verify-key-val

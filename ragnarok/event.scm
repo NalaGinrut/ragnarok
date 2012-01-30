@@ -17,7 +17,6 @@
   #:use-module (ragnarok utils)
   #:use-module (ragnarok error)
   #:use-module (srfi srfi-9)
-  #:autoload (rnrs) (enum-set-indexer)
   )
 
 (module-export-all! (current-module))
@@ -56,39 +55,32 @@
 			     event-set
 			     ragnarok-event-add)))
 
-(define make-event-enum-indexer
-  (lambda (sl)
-    (enum-set-indexer (make-enumeration sl))))
-
-(define make-event-status-enum-indexer
-  (lambda (sl)
-    (make-event-enum-indexer sl)))
-
 (define *event-status-list*
   '(wait block sleep dead ready clear unknown))
 
-(define event-status-index
-  (make-event-status-enum-indexer *event-status-list*))
-  
-(define make-event-type-enum-indexer
-  (lambda (tl)
-    (make-event-enum-indexer tl)))
-  
 (define *event-type-list*
   '(read write except unknown))
 
-(define event-type-index
-  (make-event-type-enum-indexer *event-type-list*))
+(define *event-triger-list*
+  '(level-triger edge-triger))
+
+(make-enum-indexer event-status-index *event-status-list*)
+(make-enum-indexer event-type-index *event-type-list*)
+(make-enum-indexer event-triger-index *event-triger-list*)
 
 (define* (ragnarok-event-create #:key
 				(type 'unknown)
 				(status 'unknown)
-				(fd #f))
+				(fd #f)
+				(oneshot #f)
+				(triger 'level-triger))
   (if (or (not fd) (< fd 0))
       (ragnarok-throw "invalid fd:~a~%" fd)
-      (ragnarok-make-meta-event (event-type-index type)
-				(event-status-index status)
-				fd)))
+      (ragnarok-make-new-event fd 
+			       (event-type-index type)
+			       (event-status-index status)
+			       (event-triger-index triger)
+			       oneshot)))
 
 (define-syntax-rule (ragnarok-event-from-socket socket type)
   (ragnarok-event-create #:type type #:status 'ready #:fd (port->fdes socket)))

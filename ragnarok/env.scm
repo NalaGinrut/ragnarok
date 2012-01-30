@@ -30,8 +30,11 @@
   ;; NOTE: Don't load handler-list in the <env> init. Do it when each
   ;;       <server> init. Then we have dynamic handler loader.
   (handler-list #:accessor env:handler-list #:allocation #:class)
+  
+  ;; NOTE: server-list is an assoc-list contains (server-name . server)
   (server-list #:init-value '() #:accessor env:server-list
 	       #:allocation #:class)
+
   (server-version #:init-value *ragnarok-version* #:accessor env:version)
   )
 

@@ -18,6 +18,7 @@
   #:autoload (rnrs base) (div-and-mod)
   #:autoload (rnrs bytevectors) (string->utf8 bytevector-length)
   #:autoload (rnrs io ports) (get-bytevector-all get-string-all)
+  #:autoload (rnrs) (enum-set-indexer)
   #:use-module (ice-9 regex)
   )
 
@@ -275,3 +276,9 @@
 	  (div-and-mod timout 1000))
       (lambda (second msecond)
 	(cons second msecond)))))
+
+(define-syntax make-enum-indexer
+  (syntax-rules ()
+    ((_ name sl)
+     (define name
+       (enum-set-indexer (make-enumeration sl))))))

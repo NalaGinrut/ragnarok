@@ -41,8 +41,8 @@ inline SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
   void *c = NULL;
   ragnarok_meta_event ret = NULL;
   
-  SCM_VALIDATE_INT(1 ,type);
-  SCM_VALIDATE_INT(2 ,status);
+  SCM_VALIDATE_NUMBER(1 ,type);
+  SCM_VALIDATE_NUMBER(2 ,status);
 
   t = scm_to_int(type);
   s = scm_to_int(status);
@@ -52,7 +52,7 @@ inline SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
     case READ:
     case WRITE:
     case EXCEPT:
-      SCM_VALIDATE_INT(3 ,core);
+      SCM_VALIDATE_NUMBER(3 ,core);
       c = (int*)scm_gc_malloc(sizeof(int) ,"event-fd");
       *(int*)c = scm_to_int(core);
       break;

@@ -31,9 +31,9 @@
     ((_ thunk catch exception do handler)
      (catch exception thunk handler))
     ((_ thunk1 catch exception do handler final thunk2)
-     (catch exception *thunk1 (lambda (k . e)
-				(handler k e)
-				(thunk2))))
+     (catch exception thunk1 (lambda (k . e)
+			       (handler k e)
+			       (thunk2))))
     ((_ thunk)
      (catch *ragnarok-error-symbol*
 	    thunk
@@ -46,10 +46,10 @@
 
 (define-syntax format-error-msg
   (syntax-rules ()
-    ((_ fmt)
-     (string-append "[error] " fmt))))
+    ((_ key fmt)
+     (format #f "[~a] ~a" key fmt))))
 
 (define ragnarok-print-error-msg
   (lambda (k . e)
-    (apply format #t `(,(format-error-msg (car e)) ,@(cdr e)))))
+    (apply format #t `(,(format-error-msg k (car e)) ,@(cdr e)))))
  

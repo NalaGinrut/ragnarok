@@ -78,7 +78,7 @@ License LGPLv3+: GNU LGPL 3 or later <http://gnu.org/licenses/lgpl.html>.
 Ragnarok is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 
-God bless hacking."
+God bless hacking.~%"
 	  *ragnarok-version*))
 
 (define (ragnarok-terminate)
@@ -97,8 +97,8 @@ God bless hacking."
 (define ragnarok-log-message
   (lambda (message)
     (let* ([lf (open-file *ragnarok-log-file* "a")]
-	  [cgt (get-global-current-time)]
-	  )
+	   [cgt (get-global-current-time)]
+	   )
       (if lf
 	  (format lf "~a at ~a~%" message cgt))
       (close lf)
@@ -166,7 +166,7 @@ God bless hacking."
 	     (lambda ()
 	       (server:run server)
 	       )) ;; end ragnarok-call-with-new-thread
-	    (lp (cons server server-list) (cdr rest))
+	    (lp (cons (cons sname server) server-list) (cdr rest))
 	    ) ;; end let*
 	  ) ;; end if 
       )))
@@ -186,8 +186,7 @@ God bless hacking."
 	 )
     (format #t "Find ~a sub-servers from you machine:~%" cnt)
     (for-each (lambda (sname)
-		(format #t "[~a] " sname)
-		)
+		(format #t "[~a] " sname))
 	      snl)
     (newline)
     ))
@@ -222,6 +221,9 @@ God bless hacking."
 
       ;; child(daemon) continue
       (setsid)
+
+      (if (not (file-exists? *ragnarok-running-dir*))
+	  (mkdir *ragnarok-running-dir*))
       (chdir *ragnarok-running-dir*)
 
       ;; delete old err log file ,or it will mess up with old-old err log
@@ -271,7 +273,5 @@ God bless hacking."
       )))
 
 (define (eternal-loop)
-  (let lp ()
-    (lp)
-    ))
+  (eternal-loop))
 
