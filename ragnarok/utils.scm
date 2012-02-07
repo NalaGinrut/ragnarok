@@ -282,3 +282,10 @@
     ((_ name sl)
      (define name
        (enum-set-indexer (make-enumeration sl))))))
+
+(define (port-is-end p)
+  (eof-object? (peek-char p)))
+
+(define (port-is-not-end p)
+  (not (port-is-end p)))
+

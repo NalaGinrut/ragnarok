@@ -15,16 +15,50 @@
 
 (define-module (ragnarok aio)
   #:use-module (ragnarok utils)
+  #:use-module (ragnarok error)
+  #:use-module (ice-9 rw)
   #:export (async-write async-read)
   )
 
 (define async-read
-  (lambda* (port #:key (size 4096))
-    #t
-    ))
+  (lambda* (in-port #:key (size 4096))
+	   (call-with-output-string 
+	    (lambda (out-port) 
+	      (ragnarok-try
+	       (let ([buf (make-string size)])
+		 (let lp ()
+		   (if (and (port-is-not-end fp) 
+			    (> (read-string!/partial buf fp)))
+		       (begin
+			 (write buf out-port)
+			 (lp)))))
+	       catch 'system-error
+	       do (lambda (k . e)
+		    (case (system-error-errno e)
+		      ((EAGAIN) 
+		       (yield) (write buf out-port) (lp)) 
+		      (else
+		       (error "aio encountered a unknown error!" 
+			      (system-error-errno e)))))
+	       )))))
 
 (define async-write
-  (lambda* (port #:key (size 4096))
-    #t
-    ))
+  (lambda* (str port #:key (size 4096))
+	   (let ([buf (make-string size)]
+		 [str-len (string-length str)]
+		 )
+	     (let lp ([rest str])
+	       (if (port-is-not-end port)
+		   (ragnarok-try
+		    (let ([read-len (write-string!/partial buf port)])
+		      (if (> read-len 0)
+			  (lp (substring/shared str read-len))))
+		    catch 'system-error
+		    do (lambda (k . e)
+			 (case (system-error-errno e)
+			   ((EAGAIN) (yield) (lp (substring/shared str (read-len))))
+			   (else
+			    (error "aio encountered a unknown error!" 
+				   (system-error-errno e)))))
+		    ))))))
 
