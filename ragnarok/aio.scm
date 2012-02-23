@@ -34,13 +34,15 @@
 			 (lp)))))
 	       catch 'system-error
 	       do (lambda (k . e)
-		    (case (system-error-errno e)
-		      ((EAGAIN) 
-		       (yield) (write buf out-port) (lp)) 
-		      (else
-		       (error "aio encountered a unknown error!" 
-			      (system-error-errno e)))))
-	       )))))
+		    (let ([E (system-error-errno e)])
+		      (cond
+		       ((= E EAGAIN) 
+			(yield)
+			(write buf out-port) (lp)) 
+		       (else
+			(error "aio encountered a unknown error!" 
+			       (system-error-errno e)))))
+		    ))))))
 
 (define async-write
   (lambda* (str port #:key (size 4096))
@@ -55,10 +57,13 @@
 			  (lp (substring/shared str read-len))))
 		    catch 'system-error
 		    do (lambda (k . e)
-			 (case (system-error-errno e)
-			   ((EAGAIN) (yield) (lp (substring/shared str (read-len))))
-			   (else
-			    (error "aio encountered a unknown error!" 
-				   (system-error-errno e)))))
-		    ))))))
+			 (let ([E (system-error-errno e)])
+			   (cond
+			    ((= E EAGAIN) 
+			     (yield) 
+			     (lp (substring/shared str (read-len))))
+			    (else
+			     (error "aio encountered a unknown error!" 
+				    (system-error-errno e)))))
+			 )))))))
 
