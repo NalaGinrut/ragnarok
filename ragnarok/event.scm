@@ -50,7 +50,7 @@
 
 (define ragnarok-follow-events
   (lambda (add-list event-set)
-    "add every event of event-list from event-set"
+    "add every event from event-list to event-set"
     (ragnarok-do-with-events add-list
 			     event-set
 			     ragnarok-event-add)))
@@ -82,6 +82,11 @@
 			       (event-triger-index triger)
 			       oneshot)))
 
-(define-syntax-rule (ragnarok-event-from-socket socket type)
-  (ragnarok-event-create #:type type #:status 'ready #:fd (port->fdes socket)))
+(define* (ragnarok-make-event-from-socket socket type 
+					  #:key (oneshot #f) (triger 'level))
+  (cons socket (ragnarok-event-create #:type type 
+				      #:status 'ready
+				      #:onshot oneshot
+				      #:triger triger
+				      #:fd (port->fdes socket))))
 

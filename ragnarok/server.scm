@@ -73,7 +73,7 @@
     ;;     1. init all properties
     ;;     2. init event system
     ;;     3. init handler
-    ;;     4. add subserver to env finally
+    ;;     4. finally add subserver to env
 
     (set! (server:config self) config)
     (set! (server:logger self) logger)
@@ -81,11 +81,9 @@
     (set! (env:handler-list self) handler-list)
 
     ;; init max-events
-    (if (not max-events)
-	(hash-set! config 'max-events *default-max-events*))
+    (or max-events (hash-set! config 'max-events *default-max-events*)) 
 
-    (if timeout
-	(set! (server:timeout self) (format-timeout timeout)))
+    (or timeout	(set! (server:timeout self) (format-timeout timeout)))
 
     ;; init subserver event system
     (server:init-event-system self)
@@ -96,7 +94,6 @@
 
     ;; update env's servers list
     (server:add-to-env self)
-
     ))
 
 (define-method (server:get-config (self <server>) var)
@@ -114,9 +111,7 @@
     (ragnarok-exclusive-try
      (format #t "*Starting [~a] ...~%" sname)
      (format #t "  [~a] is ~a server which's listenning in port ~a~%"
-	     sname proto port)
-     ) ;; end ragnarok-exclusive-try
-    ))
+	     sname proto port))))
 
 (define-method (server:show-config (self <server>))
   (let ([config (server:config self)])
@@ -129,7 +124,7 @@
 		       (format #f "Sub-server - ~s is down!~%"
 			       (server:name self)))
     ;; NOTE: DO NOT close listen socket here. Because Guile will
-    ;;       deal with this automatically. Or it'll cause error.
+    ;;       deal with this at exit automatically. Or it'll cause error.
   )
 
 (define-method (server:run (self <server>))
@@ -159,7 +154,7 @@
     (set! (server:listen-socket self) s)
 
     ;; add listen-socket into read-set
-    (server:add-event self (port->fdes s) 'level-triger 'read)
+    (server:add-event self s 'read)
 
     ;; response loop
     (let active-loop ()
@@ -178,7 +173,7 @@
 		;; TODO: 1. add conn-socket into write-set
 		;;       2. deal with aio
 		;;       3. del conn-socket from write-set after closed
-		;; (server:add-event self (port->fdes conn-socket))
+		(server:register-request self conn-socket)
 
 		;; deal with request in new thread
 		;; FIXME: we need thread pool! I'll do it later.
@@ -196,6 +191,11 @@
 	  
 	  ;; if socket is closed ,quit loop
 	  ))))
+
+;; NOTE: A request event is read/write usually.
+;;       So we just add this conn-socket as write type which means both read/write. 
+(define-method (server:register-request self (conn-socket <port>))
+  (server:add-event self conn-socket 'write))
 
 (define get-client-info
   (lambda (client-details)
@@ -237,7 +237,9 @@
      (lambda ()
        (call-with-values
 	   (lambda ()
-	     (if (<= max-events 0)
+	     (if (or (not max-events) 
+		     (not (integer? max-events)) 
+		     (<= max-events 0))
 		 (ragnarok-throw "invalid max-events: ~a~%" max-events)
 		 (ragnarok-event-init max-events)))
 	 (lambda (rs ws es)
@@ -251,12 +253,14 @@
 	)
     (if (null? ready-list)
 	#f ;; if no event then return #f
+	;; FIXME: This linear search maybe inefficient when lots of conn-sockets.
+	;;        I'll find another proper search algorithms instead.
 	(call/cc
 	 (lambda (return)
 	   (for-each 
 	    (lambda (pair)
-	      (let ([fd (car pair)])
-		(if (= (port->fdes socket) fd)
+	      (let ([s (port->fdes (car pair))])
+		(if (= (port->fdes socket) s)
 		    (return #t))))
 	    ready-list)
 	   #f ;; if listen socket isn't ready then return #f 
@@ -294,6 +298,14 @@
        ((except) (server:except-set self))
        (else
 	(ragnarok-throw "invalid event-set type: ~a~%" type))))))
+
+(define-method (server:add-event (self <server>) (socket <port>) (type <symbol>))
+  (let ([set (server:get-event-set self type)]
+	[event (ragnarok-make-event-from-socket socket type)]
+	) 
+    (ragnarok-try
+     (lambda ()
+       (ragnarok-event-add event set)))))
 
 (define-method (server:add-event (self <server>) (fd <integer>) 
 				 (triger <symbol>) (type <symbol>))
