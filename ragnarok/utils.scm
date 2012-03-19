@@ -19,6 +19,7 @@
   #:autoload (rnrs bytevectors) (string->utf8 bytevector-length)
   #:autoload (rnrs io ports) (get-bytevector-all get-string-all)
   #:autoload (rnrs) (enum-set-indexer)
+  #:autoload (rnrs base) (assert)
   #:use-module (ice-9 regex)
   )
 
