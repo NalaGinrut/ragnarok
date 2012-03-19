@@ -27,6 +27,13 @@
 
 (dynamic-call "init_lib" (dynamic-link "libragnarok"))
 
+(define-syntax get-errno
+  (syntax-rules (jumpkey withkey)
+    ((_ e)
+     (car (list-ref e 4)))
+    ((_ jumpkey e)
+     (car (list-ref (cdr e) 3)))))
+   
 (define F_ULOCK 0)	;; Unlock a previously locked region.
 (define F_LOCK  1)	;; a region for exclusive use.  
 (define F_TLOCK 2)	;; and lock a region for exclusive use.

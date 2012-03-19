@@ -29,18 +29,18 @@
 (define-syntax ragnarok-try
   (syntax-rules (catch throw final)
     ((_ thunk catch exception do handler)
-     (catch exception thunk handler))
+     (catch exception (lambda () thunk) handler))
     ((_ thunk1 catch exception do handler final thunk2)
-     (catch exception thunk1 (lambda (k . e)
-			       (handler k e)
-			       (thunk2))))
+     (catch exception (lambda () thunk1) (lambda (k . e)
+					   (handler k e)
+					   (thunk2))))
     ((_ thunk)
      (catch *ragnarok-error-symbol*
-	    thunk
+	    (lambda () thunk
 	    ragnarok-print-error-msg))
     ((_ thunk handler)
      (catch *ragnarok-error-symbol*
-	    thunk
+	    (lambda () thunk)
 	    handler))
     ))
 

@@ -20,50 +20,55 @@
   #:export (async-write async-read)
   )
 
+;; NOTE: tail-call is not safe in the catch-context, so we use loop.
 (define async-read
-  (lambda* (in-port #:key (size 4096))
+  (lambda* (in-port #:key (block 4096))
 	   (call-with-output-string 
 	    (lambda (out-port) 
-	      (ragnarok-try
-	       (let ([buf (make-string size)])
-		 (let lp ()
-		   (if (and (port-is-not-end fp) 
-			    (> (read-string!/partial buf fp)))
-		       (begin
-			 (write buf out-port)
-			 (lp)))))
-	       catch 'system-error
-	       do (lambda (k . e)
-		    (let ([E (system-error-errno e)])
-		      (cond
-		       ((= E EAGAIN) 
-			(yield)
-			(write buf out-port) (lp)) 
-		       (else
-			(error "aio encountered a unknown error!" 
-			       (system-error-errno e)))))
-		    ))))))
+	      (let ([buf (make-string block)])
+		(while 
+		 (and (port-is-not-end in-port) 
+		      (> (read-string!/partial buf in-port) 0))
+		 (ragnarok-try
+		  (lambda ()
+		    ;; FIXME: is necessary to force-output?
+		    (format out-port "~a~!" buf))
+		  catch #t
+		  do (lambda e
+		       (let ([E (get-errno e)])
+			 (cond
+			  ((= E EAGAIN) 
+			   (yield))
+			  ((= E EINTR)
+			   (error "aio read was interrupted by user!"))
+			  (else
+			   (error "aio encountered a unknown error!" 
+				  (system-error-errno e))))))
+		  )))))))
 
 (define async-write
-  (lambda* (str port #:key (size 4096))
-	   (let ([buf (make-string size)]
+  (lambda* (str port #:key (block 4096))
+	   (let ([buf (make-string block)]
 		 [str-len (string-length str)]
 		 )
-	     (let lp ([rest str])
-	       (if (port-is-not-end port)
-		   (ragnarok-try
-		    (let ([read-len (write-string!/partial buf port)])
-		      (if (> read-len 0)
-			  (lp (substring/shared str read-len))))
-		    catch 'system-error
-		    do (lambda (k . e)
-			 (let ([E (system-error-errno e)])
-			   (cond
-			    ((= E EAGAIN) 
-			     (yield) 
-			     (lp (substring/shared str (read-len))))
-			    (else
-			     (error "aio encountered a unknown error!" 
-				    (system-error-errno e)))))
-			 )))))))
+	     (do ([rest str (substring/shared str read-len)] 
+		  [read-len (write-string!/partial buf port)
+			    (write-string!/partial buf port)])
+		  ((and (port-is-end port) (= read-len 0)) #t)
+	       (ragnarok-try
+		(lambda ()
+		  #t)
+		catch #t
+		do (lambda e
+		     (let ([E (get-errno e)])
+		       (cond
+			((= E EAGAIN)
+			 (force-output port)
+			 (yield)) 
+			((= E EINTR)
+			 (error "aio write was interrupted by user!"))
+			(else
+			 (error "aio encountered a unknown error!" 
+				(system-error-errno e))))))
+		)))))
 
