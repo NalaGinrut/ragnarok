@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
   #:use-module (ragnarok info)
   #:use-module (ragnarok version)
   #:use-module (srfi srfi-9)
+  #:use-module (ice-9 popen)
   #:export (make-cgi-record
 	    file-stat:size
 	    record-real-bv-size
@@ -205,52 +206,34 @@
       (hash-set! env-table key value)
       )))
 
+(define-syntax-rule (generate-cgi-cmd cgi)
+  (let ([QUERY_STRING (cgi-env-get "QUERY_STRING" cgi)]
+	[conn-socket (cgi:conn-socket cgi)]
+	)
+    ;; if QUERY_STRING is not #f ,that means method is POST
+    ;; FIXME: we should use REQUEST_METHOD to decide.
+    (if QUERY_STRING
+	(begin
+	  (redirect-port conn-socket (current-input-port))
+	  (string-append "QUERY_STRING=" QUERY_STRING))
+	"")))
+	  
 (define regular-cgi-run
   (lambda (cgi charset)
-    (if (not (cgi-record? cgi))
-	(error regular-cgi-run "Not cgi-record-type!" cgi))
-    (let* ([p-buf (pipe)]
-	   [r (car p-buf)]
-	   [w (cdr p-buf)]
-	   [i (ragnarok-fork)]
+    (assert (cgi-record? cgi))
+    (let* ([target (cgi:target cgi)]
+	   [envs (generate-cgi-cmd QUERY_STRING)]
+	   [pipe (open-pipe* OPEN_BOTH envs target)] 
 	   )
 
       ;; set charset
-      (set-port-encoding! w charset)
-      (set-port-encoding! r charset)
-
-      (cond 
-       ((< i 0)
-	(values #f *Fork-Error* #f))
-       ((= i 0)
-	(let* ([target (cgi:target cgi)]
-	       [QUERY_STRING (cgi-env-get "QUERY_STRING" cgi)]
-	       [conn-socket (cgi:conn-socket cgi)]
-	       )
-	  (setvbuf w _IONBF) ;; set to block buffer
-	  (redirect-port w (current-output-port))
-	  
-	  ;; if QUERY_STRING is not #f ,that means method is POST
-	  ;; FIXME: we should use REQUEST_METHOD to decide.
-	  (if QUERY_STRING 
-	      (setenv "QUERY_STRING" QUERY_STRING)
-	      (redirect-port conn-socket (current-input-port)))
-	  
-	  (execle target (environ)) ;; run cgi script
-	  (close (current-output-port))
-	  )))
+      (set-port-encoding! pipe charset)
        
-      ;; NOTE: parent must wait child terminate, 
-      ;;       or get-bytevector-all will be blocked.
-      (ragnarok-waitpid i)
-      
-      ;; NOTE: we must close input pipe ,or get-bytevector-all will be blocked.
-      ;; I wonder if this is a bug.
-      (close w) 
-      (let* ([bv (get-bytevector-all r)]
+      (let* ([bv (get-bytevector-all pipe)]
 	     [size (bytevector-length bv)]
 	     [fst (stat (cgi:target cgi))]
 	     )
+	(close pipe)
 	(values bv
 		*OK*
 		(record-real-bv-size fst size))
@@ -258,8 +241,7 @@
 		    
 (define ragnarok-regular-cgi-handler
   (lambda (cgi charset)
-    (if (not (cgi-record? cgi))
-	(error ragnarok-regular-cgi-handler "Not cgi-record-type!" cgi))
+    (assert (cgi-record? cgi))
     (if (not (check-file-perms (cgi:target cgi) #o555)) ;; DON'T use "access?"
 	(values #f *Forbidden* #f) ;; no excute perms
 	(regular-cgi-run cgi charset)
