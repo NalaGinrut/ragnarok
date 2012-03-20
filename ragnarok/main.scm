@@ -155,21 +155,14 @@ God bless hacking.~%"
 	       ((= n 1)
 		(format #t "~a sub-server activated!~%" n))
 	       ((= n 0)
-		(format #t "No sub-server activated!~%"))
-	       )) ;; end let
-	    ) ;; end begin
+		(format #t "No sub-server activated!~%")))))
 	  (let* ([sname (car rest)]
-		 [server (make <server> #:name sname)]
-		 )
+		 [server (make <server> #:name sname)])
 	    (server:print-start-info server)
 	    (ragnarok-call-with-new-thread
 	     (lambda ()
-	       (server:run server)
-	       )) ;; end ragnarok-call-with-new-thread
-	    (lp (cons (cons sname server) server-list) (cdr rest))
-	    ) ;; end let*
-	  ) ;; end if 
-      )))
+	       (server:run server)))
+	    (lp (cons (cons sname server) server-list) (cdr rest)))))))
 
 (define (display-startup-message)
   (format #t "~a~%" version-str)
@@ -237,8 +230,7 @@ God bless hacking.~%"
 	     [log (open *ragnarok-log-file* (logior O_CREAT O_RDWR))]
 	     [lfp (open *ragnarok-lock-file* 
 			(logior O_RDWR O_CREAT)
-			#o640)]
-	     )
+			#o640)])
 	
 	;;(for-each close (iota 3)) ;; close all ports
 	(redirect-port i (current-input-port)) ;; stdin
@@ -254,8 +246,7 @@ God bless hacking.~%"
 	(flock lfp LOCK_EX)
 	
 	(write (getpid) lfp)
-	(close lfp)
-	)
+	(close lfp))
 
       ;; TODO: signal handler register
       (signal-register)

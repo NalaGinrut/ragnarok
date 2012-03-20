@@ -46,10 +46,10 @@ static inline int rag_epoll_create()
    */
   int epfd = epoll_create(1); // the arg is ignored after linux-2.6.8
 
-  if(0 > epfd)
+  if(epfd < 0)
     {
-      RAG_ERROR1("epoll_create" ,"epoll_create error! errno is %a~%",
-  		 RAG_ERR2STR(errno));
+      RAG_ERROR1("epoll_create" ,"epoll_create error! returned epfd is %a~%",
+		 scm_from_int(epfd));
     }
 
   return epfd;
@@ -63,8 +63,8 @@ static inline SCM rag_epoll_set_append(SCM read_set ,SCM write_set)
 {
   scm_rag_epoll_event_set *res = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(read_set);
   scm_rag_epoll_event_set *wes = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(write_set);
-  int rn = res->size;
-  int wn = wes->size;
+  int rn = res->count;
+  int wn = wes->count;
   SCM size = scm_from_int(rn + wn);
   SCM event_set = scm_make_epoll_event_set(size ,SCM_RAG_WRITE ,res->epfd);
   scm_rag_epoll_event_set *es = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(event_set);
@@ -78,15 +78,16 @@ static inline SCM rag_epoll_set_append(SCM read_set ,SCM write_set)
    *	    But I'm not sure about it.
    */
   for(i=0 ;i<rn ;i++)
-    es->fd_set[i] = res->fd_set[i];
+    es->ee_set[i] = res->ee_set[i];
 
   for(j=rn ;j<wn ;j++)
-    es->fd_set[j] = wes->fd_set[j];
+    es->ee_set[j] = wes->ee_set[j];
 
   return event_set;
 }
   
-static inline void rag_epoll_event_set_add_fd(scm_rag_epoll_event_set *ees ,int fd)
+static inline void rag_epoll_event_set_add_ee(scm_rag_epoll_event_set *ees,
+					      struct epoll_event *ee)
 {
   unsigned int i = 0;
 
@@ -97,7 +98,7 @@ static inline void rag_epoll_event_set_add_fd(scm_rag_epoll_event_set *ees ,int 
   while(i < ees->count)
     {
       // find whether fd is existed
-      if(ees->fd_set[i] == fd)
+      if(ees->ee_set[i]->data.fd == ee->data.fd)
   	return;
       
       i++;
@@ -105,34 +106,38 @@ static inline void rag_epoll_event_set_add_fd(scm_rag_epoll_event_set *ees ,int 
 
   i = 0;
 
-  // no sufficient fd, add to a void slot
+  // add to a void slot
   while(i < ees->count)
     {
-      if(!ees->fd_set[i])
-  	ees->fd_set[i] = fd;
+      if(!ees->ee_set[i])
+  	ees->ee_set[i] = ee;
 
       i++;
     }
 
   // no void slot, add to a new slot
   if(i >= ees->count)
-    ees->fd_set[i] = fd;
+    ees->ee_set[i] = ee;
 
   ees->count++;
 }
 
-static inline void rag_epoll_event_set_del_fd(scm_rag_epoll_event_set *ees ,int fd)
+static inline void rag_epoll_event_set_del_ee(scm_rag_epoll_event_set *ees,
+					      struct epoll_event *ee)
 {
   unsigned int i = 0;
+  int fd = ee->data.fd;
 
   // NOTE: this doesn't have to be exclusive, becaust redundent add won't do anything
   
   // NOTE: this proc won't do anything if no such fd found.
   while(i < ees->count)
     {
-      if(ees->fd_set[i] == fd)
+      if(ees->ee_set[i]->data.fd == fd)
   	{
-  	  ees->fd_set[i] = 0;
+	  // ee and ee_set[i] are identified, so just free one of them.
+	  scm_gc_free(ees->ee_set[i] ,0 ,"rag-epoll-event");
+	  ees->ee_set[i] = NULL;
   	  ees->count--;
   	  return;
   	}
@@ -146,7 +151,11 @@ scm_sizet ragnarok_free_epoll_event_set(SCM ee_set)
 {
   scm_rag_epoll_event_set *ees = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(ee_set);
 
+  // close epfd
+  close(ees->epfd);
+
   // NOTE: The second para 'size' is always ignored in Guile 2.x.
+  scm_gc_free(ees->ee_set ,0 ,"rag-epoll-event-inner-set");
   scm_gc_free(ee_set ,0 ,"rag-epoll-event-set");
 
   return 0;
@@ -172,7 +181,7 @@ static int ragnarok_print_epoll_event_set(SCM ees_smob ,SCM port,
   scm_puts(" count:" ,port);
   scm_intprint((unsigned int)ees->count ,10 ,port);
   scm_puts(" >" ,port);
-  
+
   return 1;
 }
 
@@ -193,7 +202,7 @@ SCM scm_ragnarok_make_epoll_event(SCM event_fd ,SCM type ,SCM status,
 
   fd = scm_to_int(event_fd);
   ee = (scm_rag_epoll_event*)scm_gc_malloc(sizeof(scm_rag_epoll_event) ,"epoll-event");
-  meta_event = ragnarok_make_meta_event(type ,status ,event_fd);
+  meta_event = ragnarok_make_meta_event(type ,status ,(void*)ee);
   me = (scm_rag_mevent*)SCM_SMOB_DATA(meta_event);
 
   if(RAG_TRUE_P(oneshot))
@@ -227,28 +236,30 @@ SCM scm_make_epoll_event_set(SCM size ,SCM type ,int epfd)
 #define FUNC_NAME "make-epoll-event-set"
 {
   unsigned int n = 0;
+  int i;
   int t;
-  int *fd_set = NULL;
+  struct epoll_event **ee_set = NULL;
   scm_rag_epoll_event_set *ees = NULL;
   
   SCM_VALIDATE_NUMBER(1 ,size);
   SCM_VALIDATE_NUMBER(2 ,type);
   
-  n = scm_to_uint(size);
+  n = scm_to_int(size);
   t = scm_to_int(type);
   
-  fd_set = (int*)scm_gc_malloc(sizeof(int)*n ,"epoll-fd-set");
-  // NOTE: clear fd_set array to 0, it's CRITICAL!
-  memset(fd_set ,0 ,n);
+  ee_set = (struct epoll_event**)scm_gc_malloc(n*sizeof(struct epoll_event*),
+			       "rag-epoll-event-inner-set");
+  // NOTE: clear ee_set array to 0, it's CRITICAL!
+  memset(ee_set ,0 ,n*sizeof(struct epoll_event*));
   
   ees = (scm_rag_epoll_event_set*)scm_gc_malloc(sizeof(scm_rag_epoll_event_set),
   						"rag-epoll-event-set");
   ees->type = t;
   ees->size = n;
   ees->count = 0;
-  ees->fd_set = fd_set;
+  ees->ee_set = ee_set;
   ees->epfd = epfd;
-  
+
   return scm_rag_epoll_event_set2scm(ees);
 }
 #undef FUNC_NAME
@@ -298,14 +309,35 @@ SCM scm_ragnarok_epoll_add_event(SCM meta_event ,SCM event_set)
       RAG_ERROR1("epoll_add" ,"epoll_add error! errno is %a~%" ,RAG_ERR2STR(errno));
     }
 
-  /* NOTE: I believe the fd_set adding operation must be later than epoll_ctl ADD.
+  /* NOTE: I believe the ee_set adding operation must be later than epoll_ctl ADD.
    *       In case it's been scheduled to do any epoll_wait.
    */
-  rag_epoll_event_set_add_fd(ees ,fd);
+  rag_epoll_event_set_add_ee(ees ,ee);
 
   return SCM_UNSPECIFIED;
 }
 #undef FUNC_NAME
+
+static struct epoll_event* copy_valid_ee(scm_rag_epoll_event_set* es,
+					 struct epoll_event* tmp_set)
+{
+  int n = es->size;
+  int count = es->count;
+  struct epoll_event** ee_set = es->ee_set;
+  int i = 0;
+  
+  while(n && i<count)
+    {
+      if(ee_set[n])
+	{
+	  tmp_set[i] = *ee_set[n];
+	  i++;
+	}
+      n--;
+    }
+
+  return tmp_set;
+}
   
 SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-epoll-wait"
@@ -321,7 +353,7 @@ SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
   int nfds;
   SCM ret;
   SCM *prev = &ret;
-  
+
   SCM_ASSERT_EPOLL_EVENT_SET(event_set);
   es = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(event_set);
 
@@ -342,14 +374,19 @@ SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
   ms = ms ? ms : -1;
 
   count = es->count;
-  tmp_set =
-    (struct epoll_event*)scm_gc_malloc(count*sizeof(struct epoll_event) ,"epoll_set");
+  if(!count)
+    goto end;
   
-  nfds = epoll_wait(es->epfd ,tmp_set ,es->size ,ms);
+  tmp_set = (struct epoll_event*)scm_gc_malloc(count*sizeof(struct epoll_event),
+						"epoll_set");
+  tmp_set = copy_valid_ee(es ,tmp_set);
 
-  if(0 > nfds)
+  nfds = epoll_wait(es->epfd ,tmp_set ,count ,ms);
+ 
+  if(nfds < 0)
     {
-      RAG_ERROR1("epoll_wait" ,"epoll_wait error! nfds is %a~%" ,scm_from_int(nfds));
+      RAG_ANY_ERROR("epoll_wait" ,"epoll_wait error! errno shows %a~%",
+		    RAG_ERR2STR(errno));
     }
 
   while(nfds)
@@ -362,7 +399,11 @@ SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
       nfds--;
     }
 
+  scm_gc_free(tmp_set ,0 ,"epoll_set");
   return ret;
+
+ end:
+  return SCM_EOL;
 }
 #undef FUNC_NAME
   
@@ -383,18 +424,19 @@ SCM scm_ragnarok_epoll_del_event(SCM meta_event ,SCM event_set)
   ee = (scm_rag_epoll_event*)me->core;
   fd = ee->data.fd;
 
-  /* NOTE: I believe the fd_set deleting operation must be before than epoll_ctl DEL.
+  /* NOTE: I believe the ee_set deleting operation must be before than epoll_ctl DEL.
    *       In case it's been scheduled to do any epoll_wait.
    */
-  rag_epoll_event_set_add_fd(ees ,fd);
+  rag_epoll_event_set_del_ee(ees ,ee);
 
   ret = epoll_ctl(ees->epfd ,EPOLL_CTL_DEL ,fd ,ee);
 
   if(0 > ret)
     {
-      RAG_ERROR1("epoll_del" ,"epoll_del error! errno is %a~%" ,RAG_ERR2STR(errno));
+      RAG_ALL_ERROR("epoll_del" ,"epoll_del error! errno shows %a~%",
+		    RAG_ERR2STR(errno));
     }
-  
+
   return scm_from_int(ret);
 }
 #undef FUNC_NAME

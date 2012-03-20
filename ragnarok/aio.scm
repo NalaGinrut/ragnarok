@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -24,7 +24,8 @@
   )
 
 ;; FIXME: A simple implemation to get n bytes from a port.
-;;        But inefficient, since it'll get all bytes then cut.
+;;        But inefficient because it'll get all bytes then cut.
+;;        I don't think async-read-n is very common, so let it be.
 (define (async-read-n read-port size)
   (let* ([bv (async-read read-port)]
 	 [len (bytevector-length bv)])
@@ -43,9 +44,9 @@
   (call-with-bytevector-output-port
    (lambda (out-port) 
      (while
-      (port-is-not-end read-port) 
+      (port-is-not-end? read-port) 
       (ragnarok-try
-       (lambda ()
+       (begin
 	 (put-bytevector out-port (get-bytevector-all read-port))
 	 (force-output out-port))
        catch #t
@@ -67,13 +68,12 @@
 	[len (string-length str)]
 	[begin 0]
 	[end 0]
-	[write-len 1] ;; set it to 1 to avoid being 0, but it won't do any harm.
-	[buf (make-string block)])
+	[write-len 1]) ;; set it to 1 to avoid being 0, but it won't do any harm.
     (lambda (port)
       (while
        (< begin len)
        (ragnarok-try
-	(lambda ()
+	(begin
 	  (let ([rest (if (<= end len)
 			  (substring/shared str begin end)
 			  (ragnarok-throw "async-write: impossible write-len" 

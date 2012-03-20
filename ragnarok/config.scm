@@ -21,8 +21,7 @@
 	    print-conf-table
 	    *conf-table*
 	    get-sub-server-conf-table
-	    get-sub-server-name-list)
-  )
+	    get-sub-server-name-list))
 
 ;; config will generate a global config hash table
 ;; so we need to start each server following config table
@@ -118,25 +117,20 @@
 
 (define (get-sub-server-name-list)
   (hash-map->list 
-   (lambda (k v)
-     k)
-   *conf-table*)
-  )
+   (lambda (k v) k)
+   *conf-table*))
       
 (define get-sub-server-conf-table
   (lambda (sname)
-    (hash-ref *conf-table* sname)
-    ))
+    (hash-ref *conf-table* sname)))
 
 (define get-sub-server-name
   (lambda (conf-line)
     (let* ([match (string-match *subserver-name-pattern*
 				conf-line)]
-	   [sname (and match (match:substring match 1))]
-	   )
+	   [sname (and match (match:substring match 1))])
       (and sname
-	   (string-trim-both sname))
-      )))
+	   (string-trim-both sname)))))
 
 (define fix-sconf-str
   (lambda (str)
@@ -190,8 +184,5 @@
 	    (let* ([sname (get-sub-server-name conf-line)]
 		   [sconf (get-sub-server-conf conf-port)]
 		   )
-	      (read-loop (cons (cons sname sconf) cl))
-	      ))
-	   );; end cond
-	  )))))
+	      (read-loop (cons (cons sname sconf) cl))))))))))
 

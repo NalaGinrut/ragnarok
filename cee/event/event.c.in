@@ -33,12 +33,11 @@ const char const *ragnarok_meta_status_string[] =
     "WAIT" ,"BLOCK" ,"SLEEP" ,"DEAD" ,"READY" ,"CLEAR" ,"UNKNOWN"
   };
 
-inline SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
+SCM ragnarok_make_meta_event(SCM type ,SCM status ,void* core)
 #define FUNC_NAME "ragnarok-make-meta-event"
 {
   int t;
   int s;
-  void *c = NULL;
   ragnarok_meta_event ret = NULL;
   
   SCM_VALIDATE_NUMBER(1 ,type);
@@ -52,23 +51,17 @@ inline SCM ragnarok_make_meta_event(SCM type ,SCM status ,SCM core)
     case READ:
     case WRITE:
     case EXCEPT:
-      SCM_VALIDATE_NUMBER(3 ,core);
-      c = (int*)scm_gc_malloc(sizeof(int) ,"event-fd");
-      *(int*)c = scm_to_int(core);
       break;
     default:
-      return SCM_BOOL_F;
-	/* NOTE: Return #f if encounted invalid type.
-	 *       Throw exception in Scheme code ,not in Cee code.
-	 */
+     RAG_ERROR1("make-meta-event" ,"invalid type: %a~%" ,type);
     }
 
   ret = (struct Ragnarok_Meta_Event*)
     scm_gc_malloc(sizeof(struct Ragnarok_Meta_Event) ,"meta-event");
-
+  
   ret->type = t;
   ret->status = s;
-  ret->core = (SCM*)c;
+  ret->core = (void*)core;
 
   RAG_RETURN_MEVENT2SCM(ret);
 }
@@ -97,9 +90,10 @@ int ragnarok_print_meta_event(SCM me_smob ,SCM port ,scm_print_state *pstate)
   scm_puts(" status: " ,port);
   scm_puts(RAG_ME_GET_STATUS(me) ,port);
 
-  scm_puts(" core: " ,port);
-  RAG_ME_PRN_CORE(me ,port);
-	   
+  scm_puts(" core:[epoll-event 0x" ,port);
+  scm_intprint((long)me->core ,16 ,port);
+  scm_puts("]" ,port);
+  
   scm_puts(">" ,port);
 
   return 1;

@@ -68,10 +68,9 @@
 (make-enum-indexer event-type-index *event-type-list*)
 (make-enum-indexer event-triger-index *event-triger-list*)
 
-(define* (ragnarok-event-create #:key
+(define* (ragnarok-event-create fd #:key
 				(type 'unknown)
 				(status 'unknown)
-				(fd #f)
 				(oneshot #f)
 				(triger 'level-triger))
   (if (or (not fd) (< fd 0))
@@ -82,11 +81,10 @@
 			       (event-triger-index triger)
 			       oneshot)))
 
-(define* (ragnarok-make-event-from-socket socket type 
-					  #:key (oneshot #f) (triger 'level))
-  (cons socket (ragnarok-event-create #:type type 
-				      #:status 'ready
-				      #:onshot oneshot
-				      #:triger triger
-				      #:fd (port->fdes socket))))
+(define* (ragnarok-make-event-from-socket socket type triger #:key (oneshot #f))
+  (ragnarok-event-create (port->fdes socket)
+			 #:type type 
+			 #:status 'ready
+			 #:oneshot oneshot
+			 #:triger triger))
 

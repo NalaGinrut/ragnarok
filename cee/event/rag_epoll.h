@@ -38,7 +38,7 @@ typedef struct Ragnarok_Epoll_Event_Set
   unsigned int count;
   unsigned int size;
   int epfd;
-  int *fd_set;
+  struct epoll_event **ee_set;
 }scm_rag_epoll_event_set ,scm_rag_event_set;
 
 #define RAG_LT	0
@@ -55,11 +55,15 @@ scm_sizet ragnarok_free_epoll_event_set(SCM ee_set);
 SCM scm_rag_epoll_event_set2scm(scm_rag_epoll_event_set *ees);
 static int ragnarok_print_epoll_event_set(SCM ees_smob ,SCM port,
 					  scm_print_state *pstate);
+static struct epoll_event* copy_valid_ee(scm_rag_epoll_event_set* es,
+					 struct epoll_event* tmp_set);
 SCM scm_ragnarok_make_epoll_event(SCM event_fd ,SCM type ,SCM status,
 				  SCM mode ,SCM oneshot);
 SCM scm_make_epoll_event_set(SCM size ,SCM type ,int epfd);
-static inline void rag_epoll_event_set_del_fd(scm_rag_epoll_event_set *ees ,int fd);
-static inline void rag_epoll_event_set_add_fd(scm_rag_epoll_event_set *ees ,int fd);
+static inline void rag_epoll_event_set_del_ee(scm_rag_epoll_event_set *ees,
+					      struct epoll_event* ee);
+static inline void rag_epoll_event_set_add_ee(scm_rag_epoll_event_set *ees,
+					      struct epoll_event* ee);
 static inline SCM rag_epoll_set_append(SCM read_set ,SCM write_set);
 static inline int rag_epoll_create();
 

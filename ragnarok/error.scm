@@ -36,7 +36,7 @@
 					   (thunk2))))
     ((_ thunk)
      (catch *ragnarok-error-symbol*
-	    (lambda () thunk
+	    (lambda () thunk)
 	    ragnarok-print-error-msg))
     ((_ thunk handler)
      (catch *ragnarok-error-symbol*

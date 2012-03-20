@@ -33,12 +33,13 @@
 	    server:get-config server:down
 	    server:print-start-info
 	    server:init-event-system
-	    server:add-to-env
-	    )
-  )
+	    server:add-to-env))
 
 (define *default-max-events* 32)
-(define *default-triger* 'level-triger)
+(define *default-event-triger* 'level-triger)
+
+;; FIXME: actually epoll module don't need a default timeout.
+(define *default-server-timeout* 5000) ;; default timeout 5s
 
 (define-class <server> (<env>)
   ;; FIXME: support server name later. 
@@ -82,8 +83,13 @@
 
     ;; init max-events
     (or max-events (hash-set! config 'max-events *default-max-events*)) 
+    
+    ;; init server event triger
+    (or triger (hash-set! config 'triger *default-event-triger*))
 
-    (or timeout	(set! (server:timeout self) (format-timeout timeout)))
+    ;; init server timeout
+    (or timeout	(set! timeout *default-server-timeout*))
+    (set! (server:timeout self) (format-timeout timeout))
 
     ;; init subserver event system
     (server:init-event-system self)
@@ -130,6 +136,7 @@
 (define-method (server:run (self <server>))
   (let* ([server-port (server:get-config self 'listen)]
 	 [server-protocol (server:get-config self 'proto)]
+	 [server-triger (server:get-config self 'triger)]
 	 [server-name (server:name self)]
 	 [server-software *ragnarok-version*]
 	 [server-charset (server:get-config self 'charset)]
@@ -143,14 +150,15 @@
 	 [logger (server:logger self)]
 	 )
 
-    ;; set listen-port to non-block
-    (set-port-non-block! s)
+    ;; set listen-port to non-block if edge-triger
+    ;; TODO: use a read/write handler register mechanism
+    (and (eqv? server-triger 'edge-triger) (set-port-non-block! s))
 
     ;; store listen-socket for later use
     ;; FIXME: This step can provide 'changing listen port on the fly' feature.
     ;;        But one should handle this listen-socket properly after it's closed.
     ;;        I think set! listen-socket to #f immediatly after it was closed 
-    ;;        would be a good operation.
+    ;;        would be a good solution.
     (set! (server:listen-socket self) s)
 
     ;; add listen-socket into read-set
@@ -160,7 +168,9 @@
     (let active-loop ()
       (if (not (port-closed? s))
 	  (if (not (server:wait-for-listen-port-ready self))
-	      (yield) ;; if no request then yield this thread 
+	      (begin
+		(yield) ;; if no request then yield this thread
+		(active-loop))
 	      (let* ([client-connection (ragnarok-accept s)]
 		     [conn-socket (car client-connection)]
 		     [client-details (cdr client-connection)]
@@ -220,21 +230,20 @@
 ;; listen in the port then return the socket
 (define-method (server:listen-in-port (self <server>) (port-fd <integer>))
   (ragnarok-try
-   (lambda ()
-     (let ([s (socket PF_INET SOCK_STREAM 0)]
-	   [max-req (server:get-config self 'max-request)]
-	   )
-       (setsockopt s SOL_SOCKET SO_REUSEADDR 1)
-       (ragnarok-bind s AF_INET INADDR_ANY port-fd)
-       (ragnarok-listen s max-req)
-       (set! (server:listen-socket self) s)
-       s ;; return listen-socket
-       ))))
+   (let ([s (socket PF_INET SOCK_STREAM 0)]
+	 [max-req (server:get-config self 'max-request)]
+	 )
+     (setsockopt s SOL_SOCKET SO_REUSEADDR 1)
+     (ragnarok-bind s AF_INET INADDR_ANY port-fd)
+     (ragnarok-listen s max-req)
+     (set! (server:listen-socket self) s)
+     s ;; return listen-socket
+     )))
 
 (define-method (server:init-event-system (self <server>))
   (let ([max-events (server:get-config self 'max-events)])
     (ragnarok-try
-     (lambda ()
+     (begin
        (call-with-values
 	   (lambda ()
 	     (if (or (not max-events) 
@@ -249,23 +258,16 @@
 
 (define-method (server:wait-for-listen-port-ready (self <server>))
   (let ([ready-list (server:update-ready-list self)]
-	[socket (server:listen-socket self)]
+	[listen-fd (port->fdes (server:listen-socket self))]
 	)
     (if (null? ready-list)
 	#f ;; if no event then return #f
 	;; FIXME: This linear search maybe inefficient when lots of conn-sockets.
 	;;        I'll find another proper search algorithms instead.
-	(call/cc
-	 (lambda (return)
-	   (for-each 
-	    (lambda (pair)
-	      (let ([s (port->fdes (car pair))])
-		(if (= (port->fdes socket) s)
-		    (return #t))))
-	    ready-list)
-	   #f ;; if listen socket isn't ready then return #f 
-	   )) ;; end call/cc
-	)))
+	;; FIXME: Actually we shouldn't use this linear search to check if 
+	;;        listen-socket is ready. The better solution would be a thread pool
+	;;        with a work-queue.
+	(assoc listen-fd ready-list))))
 
 (define-method (server:update-ready-list (self <server>))
   (let ([ready-list (server:get-request-events self)])
@@ -281,17 +283,16 @@
 	)
     ;; NOTE: the order is important ,read&write&except
     (ragnarok-try
-     (lambda ()
+     (let ([set-list (list read-set write-set except-set)])
        (if timeout
-	   (ragnarok-event-handler `(,read-set ,write-set ,except-set)
+	   (ragnarok-event-handler set-list
 				   (timeout:second timeout)
 				   (timeout:msecond timeout))
-	   (ragnarok-event-handler `(,read-set ,write-set ,except-set)))
-       ))))
+       (ragnarok-event-handler set-list))))))
 
 (define-method (server:get-event-set (self <server>) (type <symbol>))
   (ragnarok-try
-   (lambda ()
+   (begin
      (case type
        ((read) (server:read-set self))
        ((write) (server:write-set self))
@@ -300,12 +301,12 @@
 	(ragnarok-throw "invalid event-set type: ~a~%" type))))))
 
 (define-method (server:add-event (self <server>) (socket <port>) (type <symbol>))
-  (let ([set (server:get-event-set self type)]
-	[event (ragnarok-make-event-from-socket socket type)]
-	) 
+  (let* ([set (server:get-event-set self type)]
+	 [triger (server:get-config self 'triger)]
+	 [event (ragnarok-make-event-from-socket socket type triger)]
+	 ) 
     (ragnarok-try
-     (lambda ()
-       (ragnarok-event-add event set)))))
+     (ragnarok-event-add event set))))
 
 (define-method (server:add-event (self <server>) (fd <integer>) 
 				 (triger <symbol>) (type <symbol>))
@@ -314,8 +315,7 @@
 				      #:fd fd #:triger triger)]
 	) 
     (ragnarok-try
-     (lambda ()
-       (ragnarok-event-add event set)))))
+     (ragnarok-event-add event set))))
 
 (define-method (server:add-event (self <server>) (fd <integer>) (triger <symbol>) 
 				 (type <symbol>) (oneshot <boolean>))
@@ -325,10 +325,11 @@
 				      #:oneshot onshot)]
 	) 
     (ragnarok-try
-     (lambda ()
-       (ragnarok-event-add event set)))))
+     (ragnarok-event-add event set))))
 
 (define-method (server:add-to-env (self <server>))
-  (add-to-list! (env:server-list self) 
-		(string->symbol (server:name self))
-		self))
+  (set! (env:server-list self)
+	(cons 
+	 (cons (string->symbol (server:name self)) self)
+	 (env:server-list self))))
+

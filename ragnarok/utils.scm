@@ -281,7 +281,7 @@
   (lambda (timeout)
     (call-with-values
 	(lambda ()
-	  (div-and-mod timout 1000))
+	  (div-and-mod timeout 1000))
       (lambda (second msecond)
 	(cons second msecond)))))
 
@@ -291,9 +291,9 @@
      (define name
        (enum-set-indexer (make-enumeration sl))))))
 
-(define (port-is-end p)
+(define (port-is-end? p)
   (eof-object? (peek-char p)))
 
-(define (port-is-not-end p)
-  (not (port-is-end p)))
+(define (port-is-not-end? p)
+  (not (port-is-end? p)))
 
