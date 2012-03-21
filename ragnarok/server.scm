@@ -168,9 +168,7 @@
     (let active-loop ()
       (if (not (port-closed? s))
 	  (if (not (server:wait-for-listen-port-ready self))
-	      (begin
-		(yield) ;; if no request then yield this thread
-		(active-loop))
+	      (yield) ;; if no request then yield this thread
 	      (let* ([client-connection (ragnarok-accept s)]
 		     [conn-socket (car client-connection)]
 		     [client-details (cdr client-connection)]
@@ -183,7 +181,7 @@
 		;; TODO: 1. add conn-socket into write-set
 		;;       2. deal with aio
 		;;       3. del conn-socket from write-set after closed
-		(server:register-request self conn-socket)
+		;;(server:register-request self conn-socket)
 
 		;; deal with request in new thread
 		;; FIXME: we need thread pool! I'll do it later.
@@ -193,14 +191,10 @@
 		   (shutdown conn-socket 2) ;; can be closed after trans finished.
 		   (close-port conn-socket)      
 		   (logger:sync logger)
-		   ))
+		   ))))
 		
-		(active-loop) ;; do loop in normal situation
-		) ;; end (let* ([client-connection
-	      ) ;; end (if (not (server:wait-for-listen-port-ready
-	  
-	  ;; if socket is closed ,quit loop
-	  ))))
+		(active-loop) ;; do infinite loop in normal situation
+		))))
 
 ;; NOTE: A request event is read/write usually.
 ;;       So we just add this conn-socket as write type which means both read/write. 
@@ -257,7 +251,7 @@
 	   (set! (server:except-set self) es)))))))
 
 (define-method (server:wait-for-listen-port-ready (self <server>))
-  (let ([ready-list (server:update-ready-list self)]
+  (let ([ready-list (server:get-request-events self)]
 	[listen-fd (port->fdes (server:listen-socket self))]
 	)
     (if (null? ready-list)
@@ -271,7 +265,7 @@
 
 (define-method (server:update-ready-list (self <server>))
   (let ([ready-list (server:get-request-events self)])
-    (set! (server:ready-list self) ready-list)
+    ;;(set! (server:ready-list self) ready-list)
     ready-list
     ))
 	
@@ -282,13 +276,13 @@
 	[timeout (server:timeout self)]
 	)
     ;; NOTE: the order is important ,read&write&except
-    (ragnarok-try
+    ;;(ragnarok-try
      (let ([set-list (list read-set write-set except-set)])
        (if timeout
 	   (ragnarok-event-handler set-list
 				   (timeout:second timeout)
 				   (timeout:msecond timeout))
-       (ragnarok-event-handler set-list))))))
+       (ragnarok-event-handler set-list)))));;)
 
 (define-method (server:get-event-set (self <server>) (type <symbol>))
   (ragnarok-try

@@ -264,5 +264,6 @@ God bless hacking.~%"
       )))
 
 (define (eternal-loop)
+  (sleep 1000)
   (eternal-loop))
 

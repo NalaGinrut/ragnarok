@@ -18,7 +18,8 @@
   #:use-module (ragnarok error)
   #:export (ragnarok-posix-context
 	    ragnarok-bind
-	    ragnarok-listen)
+	    ragnarok-listen
+	    ragnarok-accept)
   )
 
 (define* (ragnarok-bind sock fam_or_sockaddr #:optional address . args)
@@ -35,5 +36,12 @@
      (lambda ()
        (listen sock backlog))
      ragnarok-print-error-msg)))
+
+(define (ragnarok-accept socket)
+  (catch 
+   'system-error
+   (lambda ()
+     (accept socket))
+   ragnarok-print-error-msg))
 
 

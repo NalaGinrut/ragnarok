@@ -69,19 +69,32 @@ static inline SCM rag_epoll_set_append(SCM read_set ,SCM write_set)
   SCM event_set = scm_make_epoll_event_set(size ,SCM_RAG_WRITE ,res->epfd);
   scm_rag_epoll_event_set *es = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(event_set);
 
+  // in this special event-set, count is equal to size, say, it's full.
+  es->count = rn+wn;
+  
   /* NOTE: I can't use -std=c99 in Ragnarok since I've already written too many
    *	   C99-incompatible code. So an ugly pre-declared variables here.
    */
-  int i,j; 
+  int i = 0 ,j = 0; 
   
   /* FIXME: I wish these two 'for's can be optimized to parallelize.
    *	    But I'm not sure about it.
    */
-  for(i=0 ;i<rn ;i++)
-    es->ee_set[i] = res->ee_set[i];
+  for(i=0,j=0 ;i<rn ;i++)		
+    {
+      if(!res->ee_set[i].data.fd)
+	continue;
+      es->ee_set[j] = res->ee_set[i];
+      j++;
+    }
 
-  for(j=rn ;j<wn ;j++)
-    es->ee_set[j] = wes->ee_set[j];
+  for(i=0,j=rn ;i<wn ;i++)
+    {
+      if(!wes->ee_set[i].data.fd)
+	continue;
+      es->ee_set[j] = wes->ee_set[i];
+      j++;
+    }
 
   return event_set;
 }
@@ -98,7 +111,7 @@ static inline void rag_epoll_event_set_add_ee(scm_rag_epoll_event_set *ees,
   while(i < ees->count)
     {
       // find whether fd is existed
-      if(ees->ee_set[i]->data.fd == ee->data.fd)
+      if(ees->ee_set[i].data.fd == ee->data.fd)
   	return;
       
       i++;
@@ -109,16 +122,16 @@ static inline void rag_epoll_event_set_add_ee(scm_rag_epoll_event_set *ees,
   // add to a void slot
   while(i < ees->count)
     {
-      if(!ees->ee_set[i])
-  	ees->ee_set[i] = ee;
+      if(!ees->ee_set[i].data.fd)
+  	ees->ee_set[i] = *ee;
 
       i++;
     }
 
   // no void slot, add to a new slot
   if(i >= ees->count)
-    ees->ee_set[i] = ee;
-
+    ees->ee_set[i] = *ee;
+    
   ees->count++;
 }
 
@@ -133,11 +146,11 @@ static inline void rag_epoll_event_set_del_ee(scm_rag_epoll_event_set *ees,
   // NOTE: this proc won't do anything if no such fd found.
   while(i < ees->count)
     {
-      if(ees->ee_set[i]->data.fd == fd)
+      if(ees->ee_set[i].data.fd == fd)
   	{
-	  // ee and ee_set[i] are identified, so just free one of them.
-	  scm_gc_free(ees->ee_set[i] ,0 ,"rag-epoll-event");
-	  ees->ee_set[i] = NULL;
+	  /* NOTE: use fd 0 to be the invalid fd which won't be a problem.
+	   */
+ 	  ees->ee_set[i].data.fd = 0;
   	  ees->count--;
   	  return;
   	}
@@ -238,7 +251,7 @@ SCM scm_make_epoll_event_set(SCM size ,SCM type ,int epfd)
   unsigned int n = 0;
   int i;
   int t;
-  struct epoll_event **ee_set = NULL;
+  struct epoll_event *ee_set = NULL;
   scm_rag_epoll_event_set *ees = NULL;
   
   SCM_VALIDATE_NUMBER(1 ,size);
@@ -247,10 +260,10 @@ SCM scm_make_epoll_event_set(SCM size ,SCM type ,int epfd)
   n = scm_to_int(size);
   t = scm_to_int(type);
   
-  ee_set = (struct epoll_event**)scm_gc_malloc(n*sizeof(struct epoll_event*),
-			       "rag-epoll-event-inner-set");
+  ee_set = (struct epoll_event*)scm_gc_malloc(n*sizeof(struct epoll_event),
+					       "rag-epoll-event-inner-set");
   // NOTE: clear ee_set array to 0, it's CRITICAL!
-  memset(ee_set ,0 ,n*sizeof(struct epoll_event*));
+  memset(ee_set ,0 ,n*sizeof(struct epoll_event));
   
   ees = (scm_rag_epoll_event_set*)scm_gc_malloc(sizeof(scm_rag_epoll_event_set),
   						"rag-epoll-event-set");
@@ -289,6 +302,7 @@ SCM scm_ragnarok_epoll_add_event(SCM meta_event ,SCM event_set)
 
   fd = ee->data.fd;
   oneshot = me->one_shot ? EPOLLONESHOT : 0;
+  mode = me->mode;
   
   switch(ees->type)
     {
@@ -318,32 +332,10 @@ SCM scm_ragnarok_epoll_add_event(SCM meta_event ,SCM event_set)
 }
 #undef FUNC_NAME
 
-static struct epoll_event* copy_valid_ee(scm_rag_epoll_event_set* es,
-					 struct epoll_event* tmp_set)
-{
-  int n = es->size;
-  int count = es->count;
-  struct epoll_event** ee_set = es->ee_set;
-  int i = 0;
-  
-  while(n && i<count)
-    {
-      if(ee_set[n])
-	{
-	  tmp_set[i] = *ee_set[n];
-	  i++;
-	}
-      n--;
-    }
-
-  return tmp_set;
-}
-  
 SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
 #define FUNC_NAME "ragnarok-epoll-wait"
 {
   scm_rag_epoll_event_set *es = NULL;
-  struct epoll_event *tmp_set = NULL;
   int fd;
   int op;
   int count;
@@ -351,8 +343,7 @@ SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
   long ms = 0L;
   SCM cons;
   int nfds;
-  SCM ret;
-  SCM *prev = &ret;
+  SCM ret = SCM_EOL;
 
   SCM_ASSERT_EPOLL_EVENT_SET(event_set);
   es = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(event_set);
@@ -377,11 +368,7 @@ SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
   if(!count)
     goto end;
   
-  tmp_set = (struct epoll_event*)scm_gc_malloc(count*sizeof(struct epoll_event),
-						"epoll_set");
-  tmp_set = copy_valid_ee(es ,tmp_set);
-
-  nfds = epoll_wait(es->epfd ,tmp_set ,count ,ms);
+  nfds = epoll_wait(es->epfd ,es->ee_set ,count ,ms);
  
   if(nfds < 0)
     {
@@ -389,17 +376,14 @@ SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
 		    RAG_ERR2STR(errno));
     }
 
-  while(nfds)
+  while(nfds--)
     {
-      fd = tmp_set[nfds].data.fd;
-      op = tmp_set[nfds].events;
+      fd = es->ee_set[nfds].data.fd;
+      op = es->ee_set[nfds].events;
       cons = scm_cons(scm_from_int(fd) ,scm_from_int(op));
-      *prev = scm_cons(cons ,SCM_EOL);
-      prev = SCM_CDRLOC(*prev);
-      nfds--;
+      ret = scm_cons(cons ,ret);
     }
 
-  scm_gc_free(tmp_set ,0 ,"epoll_set");
   return ret;
 
  end:
