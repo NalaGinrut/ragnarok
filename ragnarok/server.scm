@@ -50,9 +50,11 @@
   (config #:accessor server:config)
   (handler #:accessor server:handler)
   (logger #:accessor server:logger)
-  (read-set #:accessor server:read-set)
-  (write-set #:accessor server:write-set)
-  (except-set #:accessor server:except-set)
+  (event-set #:accessor server:event-set)
+  ;; these three lists for statistics purpose 
+  (read-list #:init-value '() #:accessor server:read-list) 
+  (write-list #:init-value '() #:accessor server:write-list)
+  (except-list #:init-value '() #:accessor server:except-list)
   (timeout #:init-value #f #:accessor server:timeout)
   (ready-list #:init-value #f #:accessor server:ready-list)
   )
@@ -141,18 +143,15 @@
 	 [server-software *ragnarok-version*]
 	 [server-charset (server:get-config self 'charset)]
 	 [server-root (server:get-config self 'root-path)]
+	 [server-conf (server:config self)]
 	 [subserver-info 
 	  (make-subserver-info server-port server-protocol
 			       server-name server-software
-			       server-charset server-root)]
+			       server-charset server-root server-conf)]
 	 [s (server:listen-in-port self server-port)]
 	 [request-handler (server:handler self)]
 	 [logger (server:logger self)]
 	 )
-
-    ;; set listen-port to non-block if edge-triger
-    ;; TODO: use a read/write handler register mechanism
-    (and (eqv? server-triger 'edge-triger) (set-port-non-block! s))
 
     ;; store listen-socket for later use
     ;; FIXME: This step can provide 'changing listen port on the fly' feature.
@@ -166,35 +165,40 @@
 
     ;; response loop
     (let active-loop ()
-      (if (not (port-closed? s))
-	  (if (not (server:wait-for-listen-port-ready self))
-	      (yield) ;; if no request then yield this thread
-	      (let* ([client-connection (ragnarok-accept s)]
-		     [conn-socket (car client-connection)]
-		     [client-details (cdr client-connection)]
-		     )
-		;; FIXME: checkout the validity
-		(server:print-status self 
-				     'client-info 
-				     (get-client-info client-details))
+      (cond
+       ((port-closed? s)
+	(error "listen-port is closed"))
+       ((server:wait-for-listen-port-ready self)
+	(let* ([client-connection (accept s)]
+	       [conn-socket (car client-connection)]
+	       [client-details (cdr client-connection)]
+	       )
+	  ;; set conn-socket to non-block if edge-triger
+	  ;; TODO: use a read/write handler register mechanism
+	  (and (eqv? server-triger 'edge-triger) (set-port-non-block! conn-socket))
 
-		;; TODO: 1. add conn-socket into write-set
-		;;       2. deal with aio
-		;;       3. del conn-socket from write-set after closed
-		;;(server:register-request self conn-socket)
+	  ;; FIXME: checkout the validity
+	  (server:print-status self 
+			       'client-info 
+			       (get-client-info client-details))
 
-		;; deal with request in new thread
-		;; FIXME: we need thread pool! I'll do it later.
-		(ragnarok-call-with-new-thread
-		 (lambda ()
-		   (request-handler logger client-connection subserver-info)
-		   (shutdown conn-socket 2) ;; can be closed after trans finished.
-		   (close-port conn-socket)      
-		   (logger:sync logger)
-		   ))))
-		
-		(active-loop) ;; do infinite loop in normal situation
-		))))
+	  ;; TODO: 1. add conn-socket into write-set
+	  ;;       2. deal with aio
+	  ;;       3. del conn-socket from write-set after closed
+	  ;;(server:register-request self conn-socket)
+
+	  ;; deal with request in new thread
+	  ;; FIXME: we need thread pool! I'll do it later.
+	  (ragnarok-call-with-new-thread
+	   (lambda ()
+	     (request-handler logger client-connection subserver-info)
+	     (shutdown conn-socket 2) ;; can be closed after trans finished.
+	     (close-port conn-socket)      
+	     (logger:sync logger)))
+	  (active-loop)))
+       (else
+	(yield) ;; if no request then yield this thread
+	(active-loop))))))
 
 ;; NOTE: A request event is read/write usually.
 ;;       So we just add this conn-socket as write type which means both read/write. 
@@ -238,88 +242,119 @@
   (let ([max-events (server:get-config self 'max-events)])
     (ragnarok-try
      (begin
-       (call-with-values
-	   (lambda ()
-	     (if (or (not max-events) 
-		     (not (integer? max-events)) 
-		     (<= max-events 0))
-		 (ragnarok-throw "invalid max-events: ~a~%" max-events)
-		 (ragnarok-event-init max-events)))
-	 (lambda (rs ws es)
-	   (set! (server:read-set self) rs)
-	   (set! (server:write-set self) ws)
-	   (set! (server:except-set self) es)))))))
-
+       (if (or (not max-events) 
+	       (not (integer? max-events)) 
+	       (<= max-events 0))
+	   (ragnarok-throw "invalid max-events: ~a~%" max-events)
+	   (set! (server:event-set self) (ragnarok-event-init max-events)))))))
+	
+;; Check if there's new request on ready-list.
+;; Or try to update ready-list then check.
 (define-method (server:wait-for-listen-port-ready (self <server>))
-  (let ([ready-list (server:get-request-events self)]
-	[listen-fd (port->fdes (server:listen-socket self))]
-	)
-    (if (null? ready-list)
-	#f ;; if no event then return #f
-	;; FIXME: This linear search maybe inefficient when lots of conn-sockets.
-	;;        I'll find another proper search algorithms instead.
-	;; FIXME: Actually we shouldn't use this linear search to check if 
-	;;        listen-socket is ready. The better solution would be a thread pool
-	;;        with a work-queue.
-	(assoc listen-fd ready-list))))
+  (let ([ready-list (server:ready-list self)]
+	[listen-fd (port->fdes (server:listen-socket self))])
+    ;; FIXME: This linear search maybe inefficient when lots of conn-sockets.
+    ;;        I'll find another proper search algorithms instead.
+    ;; FIXME: Actually we shouldn't use this linear search to check if 
+    ;;        listen-socket is ready. The better solution would be a thread pool
+    ;;        with a work-queue.
+    (cond
+     ((or (not ready-list) (null? ready-list))
+      #f) ;; if no event then return #f
+     ((assoc listen-fd ready-list)
+      #t)
+     (else
+      (assoc listen-fd (server:update-ready-list self))))))
 
 (define-method (server:update-ready-list (self <server>))
   (let ([ready-list (server:get-request-events self)])
-    ;;(set! (server:ready-list self) ready-list)
-    ready-list
-    ))
+    (set! (server:ready-list self) ready-list)
+    ready-list))
 	
 (define-method (server:get-request-events (self <server>))
-  (let ([read-set (server:read-set self)]
-	[write-set (server:write-set self)]
-	[except-set (server:except-set self)]
-	[timeout (server:timeout self)]
-	)
+  (let ([event-set (server:event-set self)]
+	[timeout (server:timeout self)])
     ;; NOTE: the order is important ,read&write&except
-    ;;(ragnarok-try
-     (let ([set-list (list read-set write-set except-set)])
-       (if timeout
-	   (ragnarok-event-handler set-list
-				   (timeout:second timeout)
-				   (timeout:msecond timeout))
-       (ragnarok-event-handler set-list)))));;)
+    (ragnarok-try
+     (if timeout
+	 (ragnarok-event-handler event-set
+				 (timeout:second timeout)
+				 (timeout:msecond timeout))
+	 (ragnarok-event-handler event-set)))))
 
-(define-method (server:get-event-set (self <server>) (type <symbol>))
+(define-method (server:get-record-list (self <server>) (type <symbol>))
   (ragnarok-try
    (begin
      (case type
-       ((read) (server:read-set self))
-       ((write) (server:write-set self))
-       ((except) (server:except-set self))
+       ((read) (server:read-list self))
+       ((write) (server:write-list self))
+       ((except) (server:except-list self))
        (else
-	(ragnarok-throw "invalid event-set type: ~a~%" type))))))
+	(ragnarok-throw "invalid record-list type: ~a~%" type))))))
+
+(define-method (server:del-event (self <server>) (type <symbol>) (socket <port>))
+  (ragnarok-try
+   (begin
+     (case type
+       ((read) 
+	(set! (server:read-list self)
+	      (assoc-remove! (server:read-list self) (port->fdes socket))))	
+       ((write) 
+	(set! (server:write-list self)
+	      (assoc-remove! (server:write-list self) (port->fdes socket))))	
+       ((except) 
+	(set! (server:except-list self)
+	      (assoc-remove! (server:except-list self) (port->fdes socket))))	
+       (else
+	(ragnarok-throw "invalid record-list type: ~a~%" type)))
+     (ragnarok-event-del (port->fdes socket) (server:event-set self))
+     )))
+   
+  
+(define-method (server:update-record-list (self <server>) (type <symbol>) 
+					  (socket <port>) event)
+  (ragnarok-try
+   (begin
+     (case type
+       ((read) 
+	(set! (server:read-list self) 
+	      (cons (cons (port->fdes socket) event) (server:read-list self))))
+       ((write) 
+	(set! (server:write-list self) 
+	      (cons (cons (port->fdes socket) event) (server:write-list self))))
+       ((except) 
+	(set! (server:except-list self) 
+	      (cons (cons (port->fdes socket) event) (server:except-list self))))
+       (else
+	(ragnarok-throw "invalid record-list type: ~a~%" type))))))
 
 (define-method (server:add-event (self <server>) (socket <port>) (type <symbol>))
-  (let* ([set (server:get-event-set self type)]
+  (let* ([lst (server:get-record-list self type)]
 	 [triger (server:get-config self 'triger)]
 	 [event (ragnarok-make-event-from-socket socket type triger)]
-	 ) 
+	 [set (server:event-set self)]) 
     (ragnarok-try
-     (ragnarok-event-add event set))))
+     (ragnarok-event-add event set)
+     (server:update-record-list self type socket event))))
 
 (define-method (server:add-event (self <server>) (fd <integer>) 
 				 (triger <symbol>) (type <symbol>))
   (let ([set (server:get-event-set self type)]
 	[event (ragnarok-event-create #:type type #:status 'ready
-				      #:fd fd #:triger triger)]
-	) 
+				      #:fd fd #:triger triger)]) 
     (ragnarok-try
-     (ragnarok-event-add event set))))
+     (ragnarok-event-add event set)
+     (server:update-record-list self type event))))
 
 (define-method (server:add-event (self <server>) (fd <integer>) (triger <symbol>) 
 				 (type <symbol>) (oneshot <boolean>))
   (let ([set (server:get-event-set self type)]
 	[event (ragnarok-event-create #:type type #:status 'ready 
 				      #:fd fd #:triger triger
-				      #:oneshot onshot)]
-	) 
+				      #:oneshot onshot)]) 
     (ragnarok-try
-     (ragnarok-event-add event set))))
+     (ragnarok-event-add event set)
+     (server:update-record-list self type event))))
 
 (define-method (server:add-to-env (self <server>))
   (set! (env:server-list self)

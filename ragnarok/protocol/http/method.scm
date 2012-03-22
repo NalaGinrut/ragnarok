@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -99,6 +99,7 @@
 	   [target (remote-info:target remote-info)]
 	   [root-path (subserver-info:server-root subserver-info)]
 	   [file (string-append root-path target)]
+	   [config (subserver-info:server-conf subserver-info)]
 	   [use-cgi (get-config config 'cgi)]
 	  	   
 	   ;; FIXME: I need this m-handler later

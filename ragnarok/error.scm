@@ -51,5 +51,6 @@
 
 (define ragnarok-print-error-msg
   (lambda (k . e)
-    (apply format #t `(,(format-error-msg k (car e)) ,@(cdr e)))))
+    (apply format #t `(,(format-error-msg k (car e)) ,@(cdr e)))
+    (primitive-exit 11)))
  

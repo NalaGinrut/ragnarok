@@ -23,12 +23,13 @@
 
 (dynamic-call "init_event_module" (dynamic-link "libragnarok-event"))
 
-;; TODO: 1. three lists for read/write/except 
+;; TODO: 1. three lists for read/write/except (compatible to select)
 ;;       2. add read/write/except event into correspding list
-;;       3. remember ragnarok-event-init returns values
+;;       3. ragnarok-event-init returns just one event_set for specific IO interface
 ;;       4. ragnarok-event-handler returns lists for ready fd
 ;;       5. enumerate read/write list and check if fd of the event elem
 ;;          equal to the ready-fd-list.
+;;       6. TODO: use a work-queue of thread pool to instead of 5
 ;; FIXME: how to determine a fd has both read and write type from ready-fd-list?
 ;;        that maybe cause a read-fd be written if it can be written.
 ;;        I think the IO operation would return EWOULDBREAK or something else.

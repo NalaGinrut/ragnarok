@@ -264,6 +264,6 @@ God bless hacking.~%"
       )))
 
 (define (eternal-loop)
-  (sleep 1000)
+  (sleep 1000) ;; to avoid high cpu usage 
   (eternal-loop))
 

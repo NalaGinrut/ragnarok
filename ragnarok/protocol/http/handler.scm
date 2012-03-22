@@ -21,6 +21,7 @@
   #:use-module (ragnarok info)
   #:use-module (ragnarok version)
   #:use-module (ragnarok utils)
+  #:autoload (rnrs io ports) (get-bytevector-all get-string-all)
   #:export (http-directory-serv-handler
 	    http-static-page-serv-handler
 	    http-regular-cgi-handler

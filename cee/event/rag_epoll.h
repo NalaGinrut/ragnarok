@@ -34,11 +34,10 @@
 
 typedef struct Ragnarok_Epoll_Event_Set
 {
-  int type;
   unsigned int count;
   unsigned int size;
   int epfd;
-  struct epoll_event *ee_set;
+  struct epoll_event *ee_set; // this is the buffer to get events from epoll_wait
 }scm_rag_epoll_event_set ,scm_rag_event_set;
 
 #define RAG_LT	0
@@ -57,12 +56,7 @@ static int ragnarok_print_epoll_event_set(SCM ees_smob ,SCM port,
 					  scm_print_state *pstate);
 SCM scm_ragnarok_make_epoll_event(SCM event_fd ,SCM type ,SCM status,
 				  SCM mode ,SCM oneshot);
-SCM scm_make_epoll_event_set(SCM size ,SCM type ,int epfd);
-static inline void rag_epoll_event_set_del_ee(scm_rag_epoll_event_set *ees,
-					      struct epoll_event* ee);
-static inline void rag_epoll_event_set_add_ee(scm_rag_epoll_event_set *ees,
-					      struct epoll_event* ee);
-static inline SCM rag_epoll_set_append(SCM read_set ,SCM write_set);
+SCM scm_make_epoll_event_set(SCM size ,int epfd);
 static inline int rag_epoll_create();
 
 

@@ -28,9 +28,6 @@
 #define RAG_ERROR1(proc ,msg ,arg) 		\
   scm_error(RAG_SYMBOL("ragnarok-error") ,proc ,msg ,arg ,SCM_EOL)
 
-#define RAG_ANY_ERROR(proc ,msg ,arg) 		\
-  scm_error(SCM_BOOL_T ,proc ,msg ,arg ,SCM_EOL)
-
 #define RAG_ERR2STR(errno) scm_from_locale_string(strerror(errno))
 
 
