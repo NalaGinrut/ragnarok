@@ -94,31 +94,26 @@ static int ragnarok_print_epoll_event_set(SCM ees_smob ,SCM port,
   return 1;
 }
 
-SCM scm_ragnarok_make_epoll_event(SCM event_fd ,SCM type ,SCM status,
+SCM scm_ragnarok_make_epoll_event(SCM fd ,SCM type ,SCM status,
 				  SCM triger ,SCM oneshot)
 #define FUNC_NAME "make-epoll-event"
 {
-  int fd;
   SCM meta_event;
   scm_rag_mevent *me = NULL;
   scm_rag_epoll_event *ee = NULL;
   
-  SCM_VALIDATE_NUMBER(1 ,event_fd);
+  SCM_VALIDATE_NUMBER(1 ,fd);
   SCM_VALIDATE_NUMBER(2 ,type);
   SCM_VALIDATE_NUMBER(3 ,status);
   SCM_VALIDATE_NUMBER(4 ,triger);
   SCM_VALIDATE_BOOL(5 ,oneshot);
 
-  fd = scm_to_int(event_fd);
   ee = (scm_rag_epoll_event*)scm_gc_malloc(sizeof(scm_rag_epoll_event) ,"epoll-event");
+  ee->data.fd = scm_to_int(fd);
+
   meta_event = ragnarok_make_meta_event(type ,status ,(void*)ee);
   me = (scm_rag_mevent*)SCM_SMOB_DATA(meta_event);
-  ee->data.fd = fd;
-
-  if(RAG_TRUE_P(oneshot))
-    me->one_shot = TRUE;
-  else
-    me->one_shot = FALSE;
+  me->one_shot = RAG_TRUE_P(oneshot) ? TRUE : FALSE;
 
   switch(scm_to_int(triger))
     {
@@ -153,7 +148,7 @@ SCM scm_make_epoll_event_set(SCM size ,int epfd)
   n = scm_to_int(size);
   
   ee_set = (struct epoll_event*)scm_gc_malloc(n*sizeof(struct epoll_event),
-					       "rag-epoll-event-inner-set");
+					      "rag-epoll-event-inner-set");
   // NOTE: clear ee_set array to 0, it's CRITICAL!
   memset(ee_set ,0 ,n*sizeof(struct epoll_event));
   
@@ -186,7 +181,7 @@ SCM scm_ragnarok_epoll_add_event(SCM meta_event ,SCM event_set)
   ees = (scm_rag_epoll_event_set*)SCM_SMOB_DATA(event_set);
   ee = (scm_rag_epoll_event*)me->core;
 
-  if(ees->count > ees->size)
+  if(ees->count >= ees->size)
     {
       RAG_ERROR1("epoll_add" ,"event set exceed! count:~a" ,scm_from_int(ees->count));
     }
@@ -214,6 +209,7 @@ SCM scm_ragnarok_epoll_add_event(SCM meta_event ,SCM event_set)
       RAG_ERROR1("epoll_add" ,"epoll_add error! errno is %a~%" ,RAG_ERR2STR(errno));
     }
 
+  ees->count++;
   return SCM_BOOL_T;
 }
 #undef FUNC_NAME
@@ -259,7 +255,7 @@ SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
   if(nfds < 0)
     {
       RAG_ERROR1("epoll_wait" ,"epoll_wait error! errno shows %a~%",
-		    RAG_ERR2STR(errno));
+		 RAG_ERR2STR(errno));	
     }
 
   while(nfds--)

@@ -56,7 +56,7 @@
   (write-list #:init-value '() #:accessor server:write-list)
   (except-list #:init-value '() #:accessor server:except-list)
   (timeout #:init-value #f #:accessor server:timeout)
-  (ready-list #:init-value #f #:accessor server:ready-list)
+  (ready-list #:init-value '() #:accessor server:ready-list)
   )
 
 (define-method (initialize (self <server>) initargs)
@@ -150,9 +150,7 @@
 			       server-charset server-root server-conf)]
 	 [s (server:listen-in-port self server-port)]
 	 [request-handler (server:handler self)]
-	 [logger (server:logger self)]
-	 )
-
+	 [logger (server:logger self)])
     ;; store listen-socket for later use
     ;; FIXME: This step can provide 'changing listen port on the fly' feature.
     ;;        But one should handle this listen-socket properly after it's closed.
@@ -164,15 +162,14 @@
     (server:add-event self s 'read)
 
     ;; response loop
-    (let active-loop ()
+    (let active-loop()
       (cond
        ((port-closed? s)
 	(error "listen-port is closed"))
        ((server:wait-for-listen-port-ready self)
-	(let* ([client-connection (accept s)]
+	(let* ([client-connection (ragnarok-accept s)]
 	       [conn-socket (car client-connection)]
-	       [client-details (cdr client-connection)]
-	       )
+	       [client-details (cdr client-connection)])
 	  ;; set conn-socket to non-block if edge-triger
 	  ;; TODO: use a read/write handler register mechanism
 	  (and (eqv? server-triger 'edge-triger) (set-port-non-block! conn-socket))
@@ -209,10 +206,8 @@
   (lambda (client-details)
     (let* ([fam (sockaddr:fam client-details)]
 	   [ip (inet-ntop fam (sockaddr:addr client-details))]
-	   [port (ntohs (sockaddr:port client-details))]
-	   )
-      (format #f "Get request from ~a, client port: ~a~%" ip port)
-      )))
+	   [port (ntohs (sockaddr:port client-details))])
+      (format #f "Get request from ~a, client port: ~a~%" ip port))))
 
 ;; TODO:
 ;; for more general, we pass info as non-type arg
@@ -221,16 +216,14 @@
 		(self <server>) (type <symbol>) (info <string>))
   (let* ([logger (server:logger self)]
 	 [time (msg-time-stamp)]
-	 [msg (make-log-msg time type info)]
-	 )
+	 [msg (make-log-msg time type info)])
     (logger:printer logger msg)))
     
 ;; listen in the port then return the socket
 (define-method (server:listen-in-port (self <server>) (port-fd <integer>))
   (ragnarok-try
    (let ([s (socket PF_INET SOCK_STREAM 0)]
-	 [max-req (server:get-config self 'max-request)]
-	 )
+	 [max-req (server:get-config self 'max-request)])
      (setsockopt s SOL_SOCKET SO_REUSEADDR 1)
      (ragnarok-bind s AF_INET INADDR_ANY port-fd)
      (ragnarok-listen s max-req)
@@ -259,8 +252,9 @@
     ;;        listen-socket is ready. The better solution would be a thread pool
     ;;        with a work-queue.
     (cond
-     ((or (not ready-list) (null? ready-list))
-      #f) ;; if no event then return #f
+     ((not ready-list)
+      ;; if no event then return #f
+      (error "invalid ready-list type, it should be a list!")) 
      ((assoc listen-fd ready-list)
       #t)
      (else
@@ -274,7 +268,6 @@
 (define-method (server:get-request-events (self <server>))
   (let ([event-set (server:event-set self)]
 	[timeout (server:timeout self)])
-    ;; NOTE: the order is important ,read&write&except
     (ragnarok-try
      (if timeout
 	 (ragnarok-event-handler event-set
@@ -310,7 +303,6 @@
      (ragnarok-event-del (port->fdes socket) (server:event-set self))
      )))
    
-  
 (define-method (server:update-record-list (self <server>) (type <symbol>) 
 					  (socket <port>) event)
   (ragnarok-try
