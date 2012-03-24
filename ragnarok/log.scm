@@ -33,7 +33,7 @@
   ;;        1. config file should have name{ conf... } pattern;
   ;;        2. server/logger should init name in the beginning;
   ;;        3. name could be dynamically changed.
-  (name #:init-value "http0" #:accessor logger:name)
+  (name #:init-value "http0" #:accessor logger:name #:init-keyword #:name)
   (path #:init-value "/var/log/ragnarok" #:accessor logger:path)
   (filename #:accessor logger:filename
 	    #:allocation #:virtual

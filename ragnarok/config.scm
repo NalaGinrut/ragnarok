@@ -113,7 +113,7 @@
       (open-input-file f))))
 
 ;; NOTE: subserver name only contains upper/lower case char and numbers
-(define *subserver-name-pattern* "\\+\\[([A-Za-z0-9 ]+)\\]")
+(define *subserver-name-pattern* "\\+\\[([A-Za-z0-9 \\-]+)\\]")
 
 (define (get-sub-server-name-list)
   (hash-map->list 
@@ -181,8 +181,7 @@
 		(string-contains conf-line *stop-sign*)) ;; sub-server who won't start
 	    (read-loop cl))
 	   ((string-contains conf-line *start-sign*)
-	    (let* ([sname (get-sub-server-name conf-line)]
-		   [sconf (get-sub-server-conf conf-port)]
-		   )
+	    (let ([sname (get-sub-server-name conf-line)]
+		  [sconf (get-sub-server-conf conf-port)])
 	      (read-loop (cons (cons sname sconf) cl))))))))))
 

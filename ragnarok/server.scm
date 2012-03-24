@@ -66,7 +66,7 @@
 	 [config (get-sub-server-conf-table name)]
 	 [status-show (hash-ref config 'status-show)]
 	 [timeout (hash-ref config 'timeout)]
-	 [logger (make <logger> `(status-show ,status-show) '())]
+	 [logger (make <logger> #:name name `(status-show ,status-show) '())]
 	 [protocol (hash-ref config 'protocol)]
 	 [max-events (hash-ref config 'max-events)]
 	 [triger (hash-ref config 'triger)]
