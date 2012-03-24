@@ -215,6 +215,9 @@ God bless hacking.~%"
       ;; child(daemon) continue
       (setsid)
 
+      ;; set locale to C
+      (setlocale LC_ALL "C")
+
       (if (not (file-exists? *ragnarok-running-dir*))
 	  (mkdir *ragnarok-running-dir*))
       (chdir *ragnarok-running-dir*)

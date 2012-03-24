@@ -86,10 +86,8 @@
 	(lambda (bv bv-len status type etag mtime)
 	  (let* ([reason (or (http-get-reason-from-status status)
 			     "Invalid Status")]
-		 [mt (with-locale LC_TIME "C"
-				  (->global-time mtime))] ;;return to client as GMT.
-		 [now-time (with-locale LC_TIME "C"
-					(get-global-current-time))]
+		 [mt (->global-time mtime)] ;;return to client as GMT.
+		 [now-time (get-global-current-time)]
 		 [response (build-response
 			    #:version 1.1
 			    #:code status

@@ -20,6 +20,7 @@
   #:autoload (rnrs io ports) (get-bytevector-all get-string-all)
   #:autoload (rnrs) (enum-set-indexer)
   #:autoload (rnrs base) (assert)
+  #:use-module (srfi srfi-19)
   #:use-module (ice-9 threads)
   #:use-module (ice-9 regex)
   )
@@ -27,6 +28,8 @@
 (module-export-all! (current-module))
 
 (dynamic-call "init_lib" (dynamic-link "libragnarok"))
+
+(define write-date (@@ (web http) write-date))
 
 (define-syntax get-errno
   (syntax-rules (jumpkey withkey)
@@ -59,16 +62,35 @@
 
 (define ->global-time
   (lambda (t)
-    (strftime "%a, %d %b %Y %T %Z" (gmtime t))
-    ))
+    ;; The old way to call strftime is obsolete for not using locale purpose.
+    ;;(strftime "%a, %d %b %Y %T %Z" (gmtime t))    
+    (call-with-output-string 
+     (lambda (port)
+       ;; NOTE: (time-utc->data t 0) to get global UTC time.
+       (write-date (time-utc->date (make-time time-utc 0 t) 0) port)))))
 
 (define ->local-time
   (lambda (t)
-    (strftime "%a, %d %b %Y %T %Z" (localtime t))
-    ))
+    ;; The old way to call strftime is obsolete for not using locale purpose.
+    ;;(strftime "%a, %d %b %Y %T %Z" (localtime t))
+    (call-with-output-string 
+     (lambda (port)
+       ;; NOTE: (time-utc->data t) to get local time.
+       (write-date (time-utc->date (make-time time-utc 0 t)) port)))))
 
 (define (get-global-current-time)
-  (strftime "%a, %d %b %Y %T %Z" (gmtime (current-time ))))
+  ;; The old way to call strftime is obsolete for not using locale purpose.
+  ;;(strftime "%a, %d %b %Y %T %Z" (gmtime (current-time ))))
+  (call-with-output-string 
+   (lambda (port)
+     ;; NOTE: (time-utc->data t) to get local time.
+     (write-date (time-utc->date (current-time) 0) port))))
+
+(define get-modified-time-str
+  (lambda (mt)
+    ;; The old way to call strftime is obsolete for not using locale purpose.
+    ;;(strftime "%Y-%b-%d %H:%I" (localtime mt))))
+    (->local-time mt)))
 
 (define search-from-list
   (lambda (l e)
@@ -231,10 +253,6 @@
     ((_ pm mode)
      (let ([seeds (make-perms-seeds pm)])
 	  (or-map seeds mode)))))
-
-(define get-modified-time-str
-  (lambda (mt)
-    (strftime "%Y-%b-%d %H:%I" (localtime mt))))
 
 (define get-file-size-str
   (lambda (bytes)
