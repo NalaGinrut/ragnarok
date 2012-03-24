@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -16,9 +16,7 @@
 (define-module (ragnarok protocol http request)
   #:use-module (ragnarok utils)
   #:use-module (srfi srfi-9)
-  #:export (request-read
-	    )
-  )
+  #:export (request-read))
 
 (define read-line (@ (ice-9 rdelim) read-line))
 
@@ -36,10 +34,8 @@
 		       (let ([ll (map string-trim-both 
 				      (string-split ll #\:))])
 			 (lp (cons ll lns))
-			 ))))]
-	      )
-	  (make-request-type method file qstr version lln))
-	))))
+			 ))))])
+	  (make-request-type method file qstr version lln))))))
 
 (define-record-type http-request
   (make-request-type method file qstr version)

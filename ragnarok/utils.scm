@@ -20,6 +20,7 @@
   #:autoload (rnrs io ports) (get-bytevector-all get-string-all)
   #:autoload (rnrs) (enum-set-indexer)
   #:autoload (rnrs base) (assert)
+  #:use-module (ice-9 threads)
   #:use-module (ice-9 regex)
   )
 
@@ -229,14 +230,11 @@
   (syntax-rules ()
     ((_ pm mode)
      (let ([seeds (make-perms-seeds pm)])
-	  (or-map seeds mode)
-	  ))
-     ))
+	  (or-map seeds mode)))))
 
 (define get-modified-time-str
   (lambda (mt)
-    (strftime "%Y-%b-%d %H:%I" (localtime mt))
-    ))
+    (strftime "%Y-%b-%d %H:%I" (localtime mt))))
 
 (define get-file-size-str
   (lambda (bytes)
@@ -244,8 +242,7 @@
       (let lp ((sz bytes) (i 0))
 	(if (>= sz 1024)
 	    (lp (/ sz 1024) (1+ i))
-	    (format #f "~5f~a" sz (list-ref units i))
-	    )))))
+	    (format #f "~5f~a" sz (list-ref units i)))))))
 
 (define-syntax ->string
   (syntax-rules ()
@@ -257,8 +254,7 @@
     (let lp ([n num] [ret '()])
       (if (or (= n 0) (eof-object? (peek-char port))) 
 	  (apply string (reverse ret)) 
-	  (lp (1- n) (cons (read-char port) ret))
-	  ))))
+	  (lp (1- n) (cons (read-char port) ret))))))
 
 (define* (regexp-split regex str #:optional (flags 0))
   (let ((ret (fold-matches 
@@ -296,4 +292,13 @@
 
 (define (port-is-not-end? p)
   (not (port-is-end? p)))
+
+(define-syntax-rule (with-locale i c e0 e1 ...)
+  (let ([old (setlocale i)])
+    (monitor
+     (dynamic-wind
+	 (lambda () (setlocale i c))
+	 (lambda () (begin e0 e1 ...))
+	 (lambda () (setlocale i old))))))
+
 

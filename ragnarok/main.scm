@@ -136,14 +136,14 @@ God bless hacking.~%"
   (sigaction SIGTSTP SIG_IGN) ;; ignore tty signals
   (sigaction SIGTTOU SIG_IGN) ;; 
   (sigaction SIGTTIN SIG_IGN) ;;
+  (sigaction SIGPIPE SIG_IGN) ;; avoid thread to be killed when client breaks
   (sigaction SIGHUP ragnarok-SIGHUP-handler) ;; catch hangup signal
   (sigaction SIGTERM ragnarok-SIGTERM-handler) ;; catch kill signal
   )
 
 (define (ragnarok-server-start)
   (let* ([snl (get-sub-server-name-list)]
-	 [cnt (length snl)]
-	 )
+	 [cnt (length snl)])
     (let lp ([server-list '()] [rest snl])
       (if (null? rest)
 	  (begin

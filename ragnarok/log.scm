@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -24,8 +24,7 @@
 	    logger:printer
 	    logger:sync
 	    logger:name logger:path
-	    logger:port logger:filename)
-  )
+	    logger:port logger:filename))
 
 (define-class <logger> ()
   ;; FIXME: Each server should a name, and each logger get this name,
@@ -48,19 +47,16 @@
 	    #:slot-set! (lambda (o v) #f))
 
   ;; port must be a symbol
-  (port #:init-value #f #:accessor logger:port)
-  )
+  (port #:init-value #f #:accessor logger:port))
   
 	      
 (define *log-ports*
   '((console-port (current-output-port))
-    (err-port (current-error-port))
-    ))
+    (err-port (current-error-port))))
 	
 (define-method (logger:sync (self <logger>))
   (force-output 
-   (logger:port self)
-   ))
+   (logger:port self)))
 
 (define-method (logger:printer (self <logger>) msg)
   (let ([port (logger:port self)])
@@ -69,9 +65,7 @@
 	(print-to-all-ports 
 	 msg 
 	 (cons `(log-port ,port)
-	       *log-ports*))
-	) ;; end ragnarok-exclusive-try
-    ))
+	       *log-ports*)))))
    
 (define-method (initialize (self <logger>) initargs)
   (next-method) ;; call regular routine
@@ -98,8 +92,7 @@
 	   [info (msg:info msg)]
 	   )
       (ragnarok-exclusive-try
-       (format port "~a:~% [~a] ~a~%" time type info)
-       )
+       (format port "~a:~% [~a] ~a~%~!" time type info))
       
       ;; FIXME: Could this sync-process drag down server's speed?
       ;;(force-output port)
@@ -110,9 +103,7 @@
     (for-each (lambda (x)
 		(let ([port (car x)])
 		  (log-printer msg port)))
-	      port-list
-	      )
-    ))
+	      port-list)))
 
 (define logger:open-proper-port
   (lambda (which filename)

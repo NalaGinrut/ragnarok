@@ -114,8 +114,7 @@
 (define-method (server:print-start-info (self <server>))
   (let ([sname (server:name self)]
 	[proto (server:get-config self 'protocol)]
-	[port (server:get-config self 'listen)]
-	)
+	[port (server:get-config self 'listen)])
     (ragnarok-exclusive-try
      (format #t "*Starting [~a] ...~%" sname)
      (format #t "  [~a] is ~a server which's listenning in port ~a~%"
@@ -190,7 +189,7 @@
 	   (lambda ()
 	     (request-handler logger client-connection subserver-info)
 	     (shutdown conn-socket 2) ;; can be closed after trans finished.
-	     (close-port conn-socket)      
+	     ;;(close-port conn-socket)      
 	     (logger:sync logger)))
 	  (active-loop)))
        (else

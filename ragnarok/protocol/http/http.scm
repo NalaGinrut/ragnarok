@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
   #:use-module (ragnarok utils)
   #:use-module (ragnarok msg)
   #:use-module (ragnarok info)
+  #:use-module (ragnarok error)
   #:use-module (web uri)
   #:use-module (web request)
   #:export (http-handler)
@@ -55,7 +56,6 @@
 	   [auth-type (request-authorization request)]
 	   [content-length (request-content-length request)]
 	   [content-type (request-content-type request)]
-	   ;; FIXME: use path-fix here
 	   [target (path-fix (uri-path (request-uri request)))]
 	   [remote-info 
 	    (make-remote-info remote-host remote-addr remote-ident
@@ -64,8 +64,7 @@
 			      target)]
 	   [server-info 
 	    (make-server-info conn-detail conn-socket
-			      subserver-info remote-info)]
-	   )
+			      subserver-info remote-info)])
       (http-request-log logger request)
       (http-response logger server-info)
       )))
@@ -79,8 +78,7 @@
 	   [subserver-info (server-info:subserver-info server-info)]
 	   [remote-info (server-info:remote-info server-info)]
 	   [method (remote-info:request-method remote-info)]
-	   [r-handler (http-method-handler-get method)]
-	   )
+	   [r-handler (http-method-handler-get method)])
 
       (call-with-values
 	  (lambda ()
@@ -88,8 +86,10 @@
 	(lambda (bv bv-len status type etag mtime)
 	  (let* ([reason (or (http-get-reason-from-status status)
 			     "Invalid Status")]
-		 [mt (->global-time mtime)] ;;return to client as GMT.
-		 [now-time (get-global-current-time)]
+		 [mt (with-locale LC_TIME "C"
+				  (->global-time mtime))] ;;return to client as GMT.
+		 [now-time (with-locale LC_TIME "C"
+					(get-global-current-time))]
 		 [response (build-response
 			    #:version 1.1
 			    #:code status
@@ -103,18 +103,16 @@
 					(content-type . ,type)
 					)
 			    #:charset charset
-			    )]
-		 )
+			    )])
 	    (write-response response conn-socket)
 	    (and bv (write-response-body bv conn-socket))
 	    ;;(http-response-log logger status)
-	    )))
-      )))
+	    ))))))
 
 (define get-request
   (lambda (logger conn-socket)
     (let* ([request (read-request conn-socket)]
-
+	   
 	   ;; FIXME: we should have a more pretty info print...
 	   [request-info (fold 
 			  (lambda (x y) 
@@ -122,15 +120,13 @@
 						     (object->string (car x))
 						     (object->string (cdr x)))))
 			  ""
-			  (request-headers request))]
-	   )
+			  (request-headers request))])
       
       ;; print request information
       (logger:printer logger 
 		      (make-log-msg (msg-time-stamp)
 				    'request-info 
 				    request-info))
-      request
-      )))
+      request)))
 
 

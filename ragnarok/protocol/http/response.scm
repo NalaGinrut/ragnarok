@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -18,9 +18,7 @@
   #:use-module (srfi srfi-9)
   #:export (build-response
 	    write-response
-	    write-response-body
-	    )
-  )
+	    write-response-body))
 
 (define put-bytevector (@ (rnrs io ports) put-bytevector))
 (define-record-type response-type
@@ -30,8 +28,7 @@
   (code response:code)
   (reason response:reason)
   (headers response:headers)
-  (charset response:charset)
-  )
+  (charset response:charset))
 
 (define gen-header-str
   (lambda (headers)
