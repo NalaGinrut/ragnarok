@@ -16,12 +16,13 @@
 (define-module (ragnarok cgi guile)
   #:use-module (ragnarok protocol http status)
   #:use-module (ragnarok protocol http log)
+  #:use-module (ragnarok info)
   #:use-module (ragnarok cgi cgi)
   #:use-module (ragnarok cgi guile-fluid)
   #:use-module (ragnarok utils)
-  #:export (cgi-guile-serv-handler
-	    )
-  )
+  #:autoload (rnrs io ports) (get-string-all)
+  #:autoload (rnrs bytevectors) (bytevector-length)
+  #:export (cgi-guile-serv-handler))
 
 (define *no-ETag* #f)
 (define *dynamic* #f)
@@ -41,8 +42,7 @@
 		(map (lambda (x) 
 		       (string-split x #\=))
 		     envion-list))
-      ht
-      )))
+      ht)))
 
 (define create-query-table
   (lambda (q-str)
@@ -53,13 +53,11 @@
 	       [qv-list (map (lambda (x)
 			       (string-split x #\=))
 			     q-list)]
-	       [qv-ht (make-hash-table)]
-	       )
+	       [qv-ht (make-hash-table)])
 	  (for-each (lambda (v)
 		      (hash-set! qv-ht (car v) (cadr v)))
 		    qv-list)
-	  qv-ht)
-	)))
+	  qv-ht))))
 
 (define guile-cgi-render
   (lambda (in-buf)
@@ -80,8 +78,7 @@
 		   [s (get-position start-sign)]
 		   [e (get-position end-sign)]
 		   [sd (get-position startd-sign)]
-		   [in-len (string-length str-in)]
-		   )
+		   [in-len (string-length str-in)])
 	      (cond
 	       ((= in-len 0) #t) ;; recursive exit
 	       ((and (or s sd) 
@@ -101,8 +98,7 @@
 	       (else
 		(write-html-to-out-buf pos s)
 		(write-script-to-out-buf (+ s ss-len) e)
-		(tpl-parser (+ e es-len)))
-	       )))]
+		(tpl-parser (+ e es-len))))))]
 	 ;; handle script display part
 	 [write-script-display-to-out-buf
 	  (lambda args
@@ -110,16 +106,12 @@
 	      (format out-buf "~a" 
 		      (string-append 
 		       " (format *ragnarok-guile-cgi-outport* \"~a\" "
-		       script-in
-		       " ) "
-		       )
-		      )))]
+		       script-in " ) "))))]
 	 ;; handle script part
 	 [write-script-to-out-buf
 	  (lambda args
 	    (let ([script-in (apply substring/shared `(,in-buf ,@args))])
-	      (format out-buf "~a" script-in)
-	      ))]
+	      (format out-buf "~a" script-in)))]
 	 ;; handle html part
 	 [write-html-to-out-buf
 	  (lambda args
@@ -128,14 +120,8 @@
 		      (string-append 
 		       " (format *ragnarok-guile-cgi-outport* \"~a\" " 
 		       (object->string html-str)
-		       " ) "
-		       )
-		      )))]
-	 );; end let-rec*
-	(tpl-parser 0)
-	);; end lambda 
-       );; end call-with-output-string
-     )))
+		       " ) "))))])
+	(tpl-parser 0))))))
 
 (define-syntax ->
   (syntax-rules (@query @post @global)
@@ -173,8 +159,7 @@
            (hash-set! *ragnarok-guile-cgi-env-table* key val))
           ((_ @global key)
            (hash-ref *ragnarok-guile-cgi-env-table* key))
-          ))"
-  )
+          ))")
 
 (define run-guile-cgi
   (lambda (cgi charset)
@@ -193,8 +178,7 @@
 	   [render-result (guile-cgi-render cgi-content)]
 	   [pp (pipe)]
 	   [r (car pp)]
-	   [w (cdr pp)]
-	   )
+	   [w (cdr pp)])
 
       ;; set charset
       (set-port-encoding! w charset)
@@ -204,32 +188,22 @@
        ([guile-cgi-outport-fluid w]
 	[query-table-fluid query-table]
 	[post-table-fluid post-table]
-	[env-table-fluid env-table]
-	)
-       (eval-string (string-append 
-		     guile-cgi-pre-head
-		     render-result
-		     " ) ")
-		    )
-       );; end with-fluids
+	[env-table-fluid env-table])
+       (eval-string (string-append guile-cgi-pre-head render-result " ) ")))
 
       (close w)
       
       (let* ([bv (get-bytevector-all r)]
 	     [bv-len (bytevector-length bv)]
-	     [fst (stat target)]
-	     )
+	     [fst (stat target)])
 	(values bv
 		*OK*
-		(record-real-bv-size fst bv-len))
-	);; end let*
-      )))
+		(record-real-bv-size fst bv-len))))))
 
 (define cgi-guile-serv-handler
   (lambda (logger filename server-info)
     (let* ([subserver-info (server-info:subserver-info server-info)]
-	   [charset (subserver-info:server-charset subserver-info)]
-	   )
+	   [charset (subserver-info:server-charset subserver-info)])
       (call-with-values
 	  (lambda ()
 	    (if (file-exists? filename)
@@ -238,10 +212,8 @@
 		 charset)
 		;; doesn't exists
 		(values (http-error-page-serv-handler logger *Not-Found*)
-			*Not-Found*))
-	    )
+			*Not-Found*)))
 	(lambda (bv status fst)
 	  (http-response-log logger status)
-	  (values bv status fst #f #f)
-	  )))))
+	  (values bv status fst #f #f))))))
 

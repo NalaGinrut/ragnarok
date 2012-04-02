@@ -6,3 +6,6 @@
 * Version number delayed each commit. Because version info is relative to git info.
   We should make sure that the user run ./autogen.sh each time they compile. 
   Can we make it automatically to avoid handling it by users?
+
+* This should throw an *Internal Error* but it causes client halt:
+  <%= not-a-bounded-symbol %>
