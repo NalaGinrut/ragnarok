@@ -58,7 +58,7 @@
   (force-output 
    (logger:port self)))
 
-(define-method (logger:printer (self <logger>) msg)
+(define-method (logger:printer (self <logger>) (msg <log-msg>))
   (let ([port (logger:port self)])
     (if port
 	(log-printer msg port)
@@ -66,7 +66,14 @@
 	 msg 
 	 (cons `(log-port ,port)
 	       *log-ports*)))))
-   
+
+(define-method (logger:printer (self <logger>) (err-status <symbol>))
+  (err-printer (symbol->string err-status) (logger:port self)))
+		  
+(define (err-printer err-msg port)
+  (ragnarok-exclusive-try
+   (format port "~a:~% ~a~%~!" (emsg:time err-msg) (emsg:status err-msg)))) 
+     
 (define-method (initialize (self <logger>) initargs)
   (next-method) ;; call regular routine
   (let* ([now (msg-time-stamp)]

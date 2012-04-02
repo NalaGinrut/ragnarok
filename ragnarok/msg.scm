@@ -24,8 +24,15 @@
   log-msg?
   (time msg:time msg:time!)
   (type msg:type msg:type!)
-  (info msg:info msg:info!)
-  )
+  (info msg:info msg:info!))
 
+(define-record-type err-msg
+  (make-err-msg time status)
+  err-msg?
+  (time emsg:time)
+  (status emsg:status))
+
+;; NOTE: This time stamp only used for local log record, 
+;;       so we could use locale-specific procedure 'strftime'.
 (define (msg-time-stamp)
   (strftime "%c" (localtime (current-time))))

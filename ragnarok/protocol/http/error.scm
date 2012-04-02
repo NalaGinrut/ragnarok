@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -17,10 +17,13 @@
   #:use-module (ragnarok protocol http status)
   #:use-module (ragnarok protocol http log)
   #:use-module (ragnarok version)
+  #:use-module (ragnarok error)
   #:use-module (ragnarok utils)
+  #:autoload (rnrs io ports) (get-bytevector-all)
   #:export (http-error-page-serv-handler
-	    http-inner-error-handler)
-  )
+	    http-inner-error-handler
+	    http-connection-error-handler)
+  #:re-export (ragnarok-try))
 
 (define *http-error-msg-list*
   '(*Continue*
@@ -95,22 +98,35 @@
   (lambda (key . parameters)
     (let* ([logger (car parameters)]
 	   [server-info (cadr parameters)]
-	   )
+	   [inner-handler 
+	    (lambda (logger server-info)
+	      (lambda (status)
+		(http-error-page-serv-handler logger status server-info)))])
       (case key
 	((*Bad-Request*)
-	 (http-error-page-serv-handler logger *Bad-Request* server-info))
+	 (inner-handler *Bad-Request*))
 	((*Forbidden*)
-	 (http-error-page-serv-handler logger *Forbidden* server-info))
+	 (inner-handler *Forbidden*))
 	((*Not-Found*)
-	 (http-error-page-serv-handler logger *Not-Found* server-info))
+	 (inner-handler *Not-Found*))
 	((*Not-Allow*)
-	 (http-error-page-serv-handler logger *Not-Allow* server-info))
+	 (inner-handler *Not-Allow*))
 	((*Not-Accept*)
-	 (http-error-page-serv-handler logger *Not-Accept* server-info))
+	 (inner-handler *Not-Accept*))
 	((*Proxy-Auth-Required*)
-	 (http-error-page-serv-handler logger *Proxy-Auth-Required* server-info))
+	 (inner-handler *Proxy-Auth-Required*))
 	((*Request-Timeout*)
-	 (http-error-page-serv-handler logger *Request-Timeout* server-info))
+	 (inner-handler  *Request-Timeout*))
 	;; TODO: finish the rest error handler
 	))))
 
+(define http-connection-error-handler
+  (lambda e
+    (case (car e)
+      ((system-error)
+       (let ([E (get-errno e)])
+	 (cond
+	  ((or (= E ECONNRESET) (= E ENOTCONN))
+	   #f))))
+      ((bad-header)
+       #f)))) ;; return #f if any connection problem occurs

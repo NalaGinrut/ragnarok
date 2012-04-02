@@ -61,13 +61,14 @@
 	    (make-remote-info remote-host remote-addr remote-ident
 			      remote-user request-method query-string
 			      auth-type content-length content-type
-			      target)]
+			      target 'OK)]
 	   [server-info 
 	    (make-server-info conn-detail conn-socket
 			      subserver-info remote-info)])
-      (http-request-log logger request)
-      (http-response logger server-info)
-      )))
+      (if request 
+	  (http-request-log logger request)
+	  (remote-info:status! remote-info 'connection-error))
+      (http-response logger server-info))))
 
 (define http-response
   (lambda (logger server-info)
@@ -77,54 +78,64 @@
 	   [conn-socket (server-info:connect-socket server-info)]
 	   [subserver-info (server-info:subserver-info server-info)]
 	   [remote-info (server-info:remote-info server-info)]
+	   [remote-status (remote-info:status remote-info)]
 	   [method (remote-info:request-method remote-info)]
 	   [r-handler (http-method-handler-get method)])
 
-      (call-with-values
-	  (lambda ()
-	    (r-handler logger server-info))
-	(lambda (bv bv-len status type etag mtime)
-	  (let* ([reason (or (http-get-reason-from-status status)
-			     "Invalid Status")]
-		 [mt (->global-time mtime)] ;;return to client as GMT.
-		 [now-time (get-global-current-time)]
-		 [response (build-response
-			    #:version 1.1
-			    #:code status
-			    #:reason reason
-			    #:headers `(,@*regular-headers*
-					(date . ,now-time)
-					(last-modified . ,mt)
-					(eTag . ,etag)
-					;; NOTE: keep these two lines last!
-					(content-length . ,bv-len)
-					(content-type . ,type)
-					)
-			    #:charset charset
-			    )])
-	    (write-response response conn-socket)
-	    (and bv (write-response-body bv conn-socket))
-	    ;;(http-response-log logger status)
-	    ))))))
+      (cond
+       ((eqv? remote-status 'OK)
+	(call-with-values
+	    (lambda ()
+	      (r-handler logger server-info))
+	  (lambda (bv bv-len status type etag mtime)
+	    (let* ([reason (or (http-get-reason-from-status status)
+			       "Invalid Status")]
+		   [mt (->global-time mtime)] ;;return to client as GMT.
+		   [now-time (get-global-current-time)]
+		   [response (build-response
+			      #:version 1.1
+			      #:code status
+			      #:reason reason
+			      #:headers `(,@*regular-headers*
+					  (date . ,now-time)
+					  (last-modified . ,mt)
+					  (eTag . ,etag)
+					  ;; NOTE: keep these two lines last!
+					  (content-length . ,bv-len)
+					  (content-type . ,type)
+					  )
+			      #:charset charset
+			      )])
+	      (write-response response conn-socket)
+	      (and bv (write-response-body bv conn-socket))
+	      ;;(http-response-log logger status)
+	      ))))
+       (else ;; log the error info
+	(http-response-log logger remote-status #:type 'error))))))
 
 (define get-request
   (lambda (logger conn-socket)
-    (let* ([request (read-request conn-socket)]
-	   
-	   ;; FIXME: we should have a more pretty info print...
-	   [request-info (fold 
-			  (lambda (x y) 
-			    (string-append y (format #f "~a : ~a~%" 
-						     (object->string (car x))
-						     (object->string (cdr x)))))
-			  ""
-			  (request-headers request))])
-      
-      ;; print request information
-      (logger:printer logger 
-		      (make-log-msg (msg-time-stamp)
-				    'request-info 
-				    request-info))
-      request)))
+    (ragnarok-try
+     (let* ([request (read-request conn-socket)]
+	    
+	    ;; FIXME: we should have a more pretty info print...
+	    [request-info (fold 
+			   (lambda (x y) 
+			     (string-append y (format #f "~a : ~a~%" 
+						      (object->string (car x))
+						      (object->string (cdr x)))))
+			   ""
+			   (request-headers request))])
+       
+       ;; print request information
+       (logger:printer logger 
+		       (make-log-msg (msg-time-stamp)
+				     'request-info 
+				     request-info))
+       request)
+       catch #t
+       do http-connection-error-handler)))
+
+
 
 

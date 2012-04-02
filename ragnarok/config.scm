@@ -51,8 +51,7 @@
   (let ([l (string-split x #\,)])
     (map (lambda (e)
 	   (string->symbol (string-trim-both e)))
-	 l)
-    ))
+	 l)))
 
 (define *valid-conf-list*
   `((root-path ,type:string)
@@ -112,7 +111,7 @@
     (let ([f (string-append path "/" file)])
       (open-input-file f))))
 
-;; NOTE: subserver name only contains upper/lower case char and numbers
+;; NOTE: subserver name only contains upper/lower case char and numbers and '-'
 (define *subserver-name-pattern* "\\+\\[([A-Za-z0-9 \\-]+)\\]")
 
 (define (get-sub-server-name-list)

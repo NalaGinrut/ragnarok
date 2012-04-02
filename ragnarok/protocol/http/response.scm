@@ -15,6 +15,7 @@
 
 (define-module (ragnarok protocol http response)
   #:use-module (ragnarok protocol http header)
+  #:use-module (ragnarok protocol http error)
   #:use-module (srfi srfi-9)
   #:export (build-response
 	    write-response
@@ -38,10 +39,8 @@
 		   (let ([head-str (http-header (car h)
 						(cdr h))])
 		     (if head-str
-			 (format p "~%~a" head-str)
-			 )))
-		 headers)
-       ))))
+			 (format p "~%~a" head-str))))
+		 headers)))))
 
 ;; Rewrite from (web response), this version is smarter (I think, at least).
 ;; NOTE: We don't need to verify the headers, because we can make sure of it.
@@ -51,10 +50,8 @@
 	  (code 200)
 	  (headers '())
 	  reason
-	  (charset "iso-8859-1")
-	  )
-  (make-response-type version code reason headers charset)
-  )
+	  (charset "iso-8859-1"))
+  (make-response-type version code reason headers charset))
 
 (define write-response
   (lambda (response port)
@@ -64,14 +61,18 @@
 	   [headers (gen-header-str (response:headers response))]
 	   [charset (response:charset response)]
 	   )
-      (format port "HTTP/~a ~a ~a ~a; charset=~a~%~%"
-	      version code reason headers charset)
-      )))
+      (ragnarok-try
+       (format port "HTTP/~a ~a ~a ~a; charset=~a~%~%"
+	       version code reason headers charset)
+       catch #t
+       do http-connection-error-handler))))
        
 (define-syntax write-response-body
   (syntax-rules ()
     ((_ bv port)
-     (put-bytevector port bv)
-     )))
+     (ragnarok-try
+      (put-bytevector port bv)
+      catch #t
+      do http-connection-error-handler))))
 
 	   

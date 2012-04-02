@@ -39,7 +39,7 @@
   (make-remote-info remote-host remote-addr remote-ident
 		    remote-user request-method query-string
 		    auth-type content-length content-type
-		    target)
+		    target status)
   remote-info?
   (remote-host remote-info:remote-host)
   (remote-addr remote-info:remote-addr)
@@ -51,6 +51,7 @@
   (content-length remote-info:content-length)
   (content-type remote-info:content-type)
   (target remote-info:target)
+  (status remote-info:status remote-info:status!)
   )
 
 (define-record-type server-info
