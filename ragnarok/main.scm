@@ -74,7 +74,7 @@ God bless hacking.\n
 ~a. 
 
 Copyright (C) 2011-2012 Mu Lei known as \"NalaGinrut\" <NalaGinrut@gmail.com>
-License LGPLv3+: GNU LGPL 3 or later <http://gnu.org/licenses/lgpl.html>.
+License LGPLv3+: GNU GPL 3 or later <http://gnu.org/licenses/gpl.html>.
 Ragnarok is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 
