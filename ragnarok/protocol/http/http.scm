@@ -25,8 +25,7 @@
   #:use-module (ragnarok error)
   #:use-module (web uri)
   #:use-module (web request)
-  #:export (http-handler)
-  )
+  #:export (http-handler))
 
 (define http-method-handler-get 
   (@ (ragnarok protocol http method) http-method-handler-get)) 
@@ -102,10 +101,8 @@
 					  (eTag . ,etag)
 					  ;; NOTE: keep these two lines last!
 					  (content-length . ,bv-len)
-					  (content-type . ,type)
-					  )
-			      #:charset charset
-			      )])
+					  (content-type . ,type))
+			      #:charset charset)])
 	      (write-response response conn-socket)
 	      (and bv (write-response-body bv conn-socket))
 	      ;;(http-response-log logger status)

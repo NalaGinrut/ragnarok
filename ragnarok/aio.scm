@@ -20,8 +20,7 @@
   #:autoload (rnrs io ports) (put-bytevector
 			      get-bytevector-n
 			      call-with-bytevector-output-port)
-  #:export (async-write async-read async-read-n)
-  )
+  #:export (async-write async-read async-read-n))
 
 ;; FIXME: A simple implemation to get n bytes from a port.
 ;;        But inefficient because it'll get all bytes then cut.

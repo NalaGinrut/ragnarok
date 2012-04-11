@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -16,9 +16,7 @@
 (define-module (ragnarok protocol http header)
   #:use-module (ragnarok version)
   #:export (http-header
-	    *regular-headers*
-	    )
-  )
+	    *regular-headers*))
 
 (define *OS-info* (vector-ref (uname) 0))
 (define *server-info*
@@ -33,12 +31,10 @@
 	 (format #f "~a: ~a"
 		 (string-capitalize (symbol->string field))
 		 value)
-	 #f)
-     )))
+	 #f))))
 
 (define *regular-headers*
   `((server . ,*server-info*)
     (accept-ranges . ,*accept-ranges*)
-    (age . ,*age*)
-    ))
+    (age . ,*age*)))
 

@@ -17,19 +17,16 @@
   #:use-module (ragnarok utils)
   #:use-module (ragnarok protocol)
   #:use-module (oop goops)
-  #:export (eips-handler)
-  )
+  #:export (eips-handler))
 
 (define eips-handler 
   (lambda (logger client-connection subserver-info)
-    #t
-    ))
+    #t))
 
 (define-class <eips> (<protocol>)
   ;; TODO: finish <eips> class
   (charset #:init-value "utf-8" #:accessor eips:charset)
-  (target #:init-value #f #:accessor eips:target)
-  )
+  (target #:init-value #f #:accessor eips:target))
 
 (define-method (eips:run (self <eips>))
   (let* ([p-buf (pipe)]
@@ -38,8 +35,7 @@
 	 [i (ragnarok-fork)]
 	 [charset (eips:charset self)]
 	 [target (eips:target eips)]
-	 [conn-socket (protocol:conn-socket eips)]
-	 )
+	 [conn-socket (protocol:conn-socket eips)])
     
     ;; DON'T use "access?" ,and we can use exception throw
     (cond
@@ -61,8 +57,7 @@
       ;; NOTE: conn-socket must be the input-port
       (redirect-port conn-socket (current-input-port))
       (execle target (environ)) ;; run eip
-      (close (current-output-port))
-      ))
+      (close (current-output-port))))
     
     ;; NOTE: parent must wait for child terminate, 
     ;;       or get-bytevector-all will be blocked.
@@ -73,7 +68,6 @@
     (close w) 
  
     ;; NOTE: return as bytevector
-    (get-bytevector-all r)
-    ))
+    (get-bytevector-all r)))
 
 

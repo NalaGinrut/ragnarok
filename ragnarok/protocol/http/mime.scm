@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -18,9 +18,7 @@
   #:export (get-mime-handler
 	    *mime-types-table*
 	    get-type-from-mime
-	    init-mime
-	    )
-  )
+	    init-mime))
 
 (define *mime-list-file* "/etc/ragnarok/mime.list")
 
@@ -32,8 +30,7 @@
 
 (define get-type-from-mime
   (lambda (mime)
-    (hash-ref *mime-types-table* mime)
-    ))
+    (hash-ref *mime-types-table* mime)))
 
 ;; TODO: generate this table on the env init time, and save a copy in env.
 (define *mime-types-table* (make-hash-table 100))
@@ -41,8 +38,7 @@
 
 ;; TODO: generated mime-types table
 (define (get-mime-types-list)
-  (load *mime-list-file*)
-  )
+  (load *mime-list-file*))
 
 (define (init-mime)
   (let ([mtl (get-mime-types-list)])
@@ -63,13 +59,11 @@
 		(hash-set! *mime-handlers-table*
 			   (car x)
 			   (cadr x)))
-	      *mime-handler-list*)
-    ))
+	      *mime-handler-list*)))
 
 ;; TODO: MIME handler should be dynamically registered.
 (define *mime-handler-list*
   `((html ,(@ (ragnarok protocol http handler) http-static-page-serv-handler))
-    (gl ,(@ (ragnarok cgi guile) cgi-guile-serv-handler))
-    ))
+    (gl ,(@ (ragnarok cgi guile) cgi-guile-serv-handler))))
 
 

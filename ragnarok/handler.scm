@@ -18,9 +18,7 @@
   #:export (get-handler 
 	    handler-register!
 	    handler-unregister!
-	    load-handler
-	    )
-  )
+	    load-handler))
 
 (define *handler-list* '())
 
@@ -30,16 +28,13 @@
     ((_ proto handler)
      (add-to-list! *handler-list*
 		   proto
-		   (@ (ragnarok protocol proto proto) handler))
-     )))
+		   (@ (ragnarok protocol proto proto) handler)))))
 
 ;; NOTE: proto here must be a symbol!
 (define-syntax handler-unregister! 
   (syntax-rules () 
     ((_ proto handler)
-     (add-to-list! *handler-list*
-		   proto)
-     )))
+     (add-to-list! *handler-list* proto))))
 
 (define get-handler
   (lambda (hl protocol)
@@ -49,15 +44,13 @@
      (protocol
       (assoc-ref hl protocol))
      (else
-      (error get-handler "protocol isn't specified!" protocol)
-      ))))
+      (error get-handler "protocol isn't specified!" protocol)))))
 
 (define (show-supported-protocol)
   (format #t "Ragnarok supports these protocols:~%")
   (for-each (lambda (x)
 	      (format #t "~a~%" (car x)))
-	    *handler-list*)
-  )
+	    *handler-list*))
 
 ;; NOTE: dynamic handler register, then we can add new handler
 ;;       without restarting the server~
@@ -76,8 +69,7 @@
 ;		http
 ;		(@ (ragnarok protocol http http) http-handler))
 
-  *handler-list*
-  )
+  *handler-list*)
 
 
 

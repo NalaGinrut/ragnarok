@@ -20,8 +20,7 @@
 	    threads:new
 	    ragnarok-exclusive-try
 	    ragnarok-call-with-new-fork
-	    ragnarok-call-with-new-thread)
-  )
+	    ragnarok-call-with-new-thread))
 
 ;; we use *futures* in Guile to implement thread pool
 ;; maybe we need a brand new thread pool later... 
@@ -37,20 +36,17 @@
     ((_ proc . args)
      (make-thread proc . args))
     ((_ & proc . args)
-     (threads:enqueue proc . args)
-     )))
+     (threads:enqueue proc . args))))
 
 (define-syntax ragnarok-exclusive-try 
   (syntax-rules ()
     ((_ body ...)
-     (monitor body ...)
-     )))
+     (monitor body ...))))
 
 (define-syntax ragnarok-call-with-new-thread
   (syntax-rules ()
     ((_ thunk ...)
-     (call-with-new-thread thunk ...)
-     )))
+     (call-with-new-thread thunk ...))))
 
 (define ragnarok-call-with-new-fork
   (lambda (thunk)
@@ -64,9 +60,7 @@
 	(error ragnarok-call-with-new-fork
 	       "Fork error!~%"))
        ((= i 0)
-	(apply thunk '()))
-       ))
-    ))
+	(apply thunk '()))))))
 	
 	       
 	

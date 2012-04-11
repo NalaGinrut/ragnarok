@@ -14,13 +14,11 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok hook)
-  #:export (hook-list-init)
-  )
+  #:export (hook-list-init))
 
 (define *hook-list*
   `((http ,(@ (ragnarok protocol http hook) init-hook))
-    (eips ,(@ (ragnarok protocol eips hook) init-hook))
-    ))
+    (eips ,(@ (ragnarok protocol eips hook) init-hook))))
 
 (define (hook-list-init)
   (for-each (lambda (hk)

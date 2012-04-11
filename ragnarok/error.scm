@@ -17,8 +17,7 @@
   #:use-module (ragnarok utils)
   #:export (ragnarok-try 
 	    ragnarok-throw
-	    ragnarok-print-error-msg)
-  )
+	    ragnarok-print-error-msg))
 
 (define *ragnarok-error-symbol* 'ragnarok-error)
 
@@ -41,8 +40,7 @@
     ((_ thunk handler)
      (catch *ragnarok-error-symbol*
 	    (lambda () thunk)
-	    handler))
-    ))
+	    handler))))
 
 (define-syntax format-error-msg
   (syntax-rules ()

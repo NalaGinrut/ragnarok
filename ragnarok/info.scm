@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -16,8 +16,7 @@
 (define-module (ragnarok info)
   #:use-module (srfi srfi-9)
   #:use-module (ragnarok version)
-  #:use-module (ragnarok utils)
-  )
+  #:use-module (ragnarok utils))
 
 (module-export-all! (current-module))
 
@@ -32,8 +31,7 @@
   (server-software subserver-info:server-software)
   (server-charset subserver-info:server-charset)
   (server-root subserver-info:server-root)
-  (server-conf subserver-info:server-conf)
-  )
+  (server-conf subserver-info:server-conf))
 
 (define-record-type remote-info
   (make-remote-info remote-host remote-addr remote-ident
@@ -51,8 +49,7 @@
   (content-length remote-info:content-length)
   (content-type remote-info:content-type)
   (target remote-info:target)
-  (status remote-info:status remote-info:status!)
-  )
+  (status remote-info:status remote-info:status!))
 
 (define-record-type server-info
   (make-server-info connect-info connect-socket
@@ -61,6 +58,5 @@
   (connect-info server-info:connect-info)
   (connect-socket server-info:connect-socket)
   (subserver-info server-info:subserver-info)
-  (remote-info server-info:remote-info)
-  )
+  (remote-info server-info:remote-info))
 		    

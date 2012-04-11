@@ -65,42 +65,35 @@
     (eip ,type:string) ;; eip is the absolute path of the runnable program
     (max-events ,type:integer)
     (timeout ,type:integer)
-    (triger ,type:symbol)
-    ))
+    (triger ,type:symbol)))
 
 (define verify-key-val
   (lambda (key val)
     (let ([vp (car (assoc-ref *valid-conf-list* key))])
       (or (vp val) 
-	  (error verify-key-val "invalid key!" key))
-      )))
+	  (error verify-key-val "invalid key!" key)))))
 	   
 (define gen-conf-table
   (lambda ()
     (let ([conf-list (get-config-list)])
       (for-each add-each-sub-server-conf-to-table conf-list)
-      *conf-table*
-      )))
+      *conf-table*)))
 
 (define add-each-sub-server-conf-to-table
   (lambda (sc-pair)
     (let* ([sub-server-conf-table (make-hash-table)]
 	   [sname (car sc-pair)]
-	   [sconf (cdr sc-pair)]
-	   )
+	   [sconf (cdr sc-pair)])
       (for-each 
        (lambda (kv-pair) 
 	 (let* ([k (car kv-pair)]
 		[v (cdr kv-pair)]
-		[vv (verify-key-val k v)]
-		)
-	   (hash-set! sub-server-conf-table k vv)
-	   )) ;; end lambda
+		[vv (verify-key-val k v)])
+	   (hash-set! sub-server-conf-table k vv)))
        sconf) ;; end for-each
       
       ;; add sub-server conf table to table
-      (hash-set! *conf-table* sname sub-server-conf-table)
-      )))
+      (hash-set! *conf-table* sname sub-server-conf-table))))
 
 (define verify-conf-list
   (lambda (conf-list)
@@ -136,14 +129,12 @@
     (let ([i (string-contains "{" str)])
       (if i
 	  (string-copy str (1+ i))
-	  str
-	  ))))
+	  str))))
 
 (define get-sub-server-conf
   (lambda (fp)
     (let* ([sconf-str-0 (read-delimited "}" fp)]
-	   [sconf-str (fix-sconf-str sconf-str-0)]
-	   )
+	   [sconf-str (fix-sconf-str sconf-str-0)])
       (call-with-input-string 
        sconf-str
        (lambda (port)
@@ -162,10 +153,7 @@
 			(string-trim-both (car kvl)))]
 		      [val (string-trim-both (cadr kvl))]
 		      )
-		 (read-loop (cons (cons key val) scl))
-		 ))) ;; end cond
-	     )))) ;; end call-with-input-string
-      )))
+		 (read-loop (cons (cons key val) scl))))))))))))
 	   
 (define get-config-list
   (lambda ()

@@ -19,8 +19,7 @@
   #:export (ragnarok-posix-context
 	    ragnarok-bind
 	    ragnarok-listen
-	    ragnarok-accept)
-  )
+	    ragnarok-accept))
 
 (define* (ragnarok-bind sock fam_or_sockaddr #:optional address . args)
   (catch

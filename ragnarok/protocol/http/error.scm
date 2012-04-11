@@ -79,8 +79,7 @@
 
     ;; Server Extended (only ragnarok)
     *Fork-Error*
-    *CGI-Not-Allowed*
-    ))
+    *CGI-Not-Allowed*))
 
 (define http-error-page-serv-handler
   (lambda (logger status server-info)
@@ -89,10 +88,8 @@
 				     stat-file)]
 	   [err-bv (get-bytevector-all
 		    (open-input-file stat-html))]
-	   [fst (stat stat-html)]
-	   )
-      (values err-bv status fst)
-      )))
+	   [fst (stat stat-html)])
+      (values err-bv status fst))))
 
 (define http-inner-error-handler
   (lambda (key . parameters)

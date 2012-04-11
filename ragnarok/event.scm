@@ -16,8 +16,7 @@
 (define-module (ragnarok event)
   #:use-module (ragnarok utils)
   #:use-module (ragnarok error)
-  #:use-module (srfi srfi-9)
-  )
+  #:use-module (srfi srfi-9))
 
 (module-export-all! (current-module))
 

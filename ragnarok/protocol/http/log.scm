@@ -41,10 +41,8 @@
 (define http-request-log
   (lambda (logger request)
     (let* ([path (uri-path (request-uri request))]
-	   [info (format #f "Client request ~a" path)]
-	   )
+	   [info (format #f "Client request ~a" path)])
       (logger:printer logger
 		      (make-log-msg (msg-time-stamp)
 				    'request-info
-				    info))
-      )))
+				    info)))))

@@ -16,11 +16,9 @@
 (define-module (ragnarok protocol)
   #:use-module (ragnarok utils)
   #:use-module (oop goops)
-  #:export ()
-  )
+  #:export ())
 
-;; 'protocol' here means communication protocol rather than 'protocol pattern'
-;; in OOP
+;; 'protocol' here means communication protocol NOT 'protocol pattern' in OOP
 
 (define-class <protocol> ()
   (name #:init-value "unknown protocol" #:accessor protocol:name)

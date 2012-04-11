@@ -49,9 +49,7 @@
 	    cgi:server-name! 
 	    cgi:server-port! 
 	    cgi:server-protocol!
-	    cgi:server-software!
-	    )
-  )
+	    cgi:server-software!))
 
 ;; NOTE: We must return file-stat as one of values, but the stat:size is not
 ;;       the real size of dynamic page. So we modify the stat:size.
@@ -59,8 +57,7 @@
 (define record-real-bv-size
   (lambda (st size)
     (vector-set! st file-stat:size size)
-    st
-    ))
+    st))
 
 (define *cgi-env-vars-numbers* 17)
 (define (create-cgi-env-table)
@@ -92,8 +89,7 @@
   cgi-record?
   (target cgi:target)
   (env-table cgi:env-table) ;; a hash table to put envion vars
-  (conn-socket cgi:conn-socket)
-  )
+  (conn-socket cgi:conn-socket))
 
 (define http-make-cgi-type
   (lambda (fixed-target server-info)
@@ -119,8 +115,7 @@
 	    (subserver-info:server-protocol subserver-info)]
 	   [server-software 
 	    (subserver-info:server-software subserver-info)] 
-	   [env-table (create-cgi-env-table)]
-	   )
+	   [env-table (create-cgi-env-table)])
       (create-cgi fixed-target conn-socket 
 		  #:QUERY_STRING query-string
 		  #:REQUEST_METHOD request-method
@@ -138,8 +133,7 @@
 		  #:SERVER_NAME server-name
 		  #:SERVER_PORT server-port
 		  #:SERVER_PROTOCOL server-protocol
-		  #:SERVER_SOFTWARE server-software)
-      )))
+		  #:SERVER_SOFTWARE server-software))))
 
 (define create-cgi
   (lambda* 
@@ -161,8 +155,7 @@
 	   (SERVER_NAME "")
 	   (SERVER_PORT "80")
 	   (SERVER_PROTOCOL "http")
-	   (SERVER_SOFTWARE *ragnarok-version*)
-	   )
+	   (SERVER_SOFTWARE *ragnarok-version*))
   ;; WARN: DO NOT change this order.
   (let* ([vl `(,AUTH_TYPE
 	       ,CONTENT_LENGTH
@@ -181,8 +174,7 @@
 	       ,SERVER_PORT
 	       ,SERVER_PROTOCOL
 	       ,SERVER_SOFTWARE)]
-	 [env-table (make-hash-table *cgi-env-vars-numbers*)]
-	 )
+	 [env-table (make-hash-table *cgi-env-vars-numbers*)])
      
     (for-each (lambda (k v)
 		(hash-set! env-table k v))
@@ -191,25 +183,21 @@
     
     (make-cgi-record target
 		     env-table
-		     conn-socket)
-    )))
+		     conn-socket))))
 
 (define cgi-env-get
   (lambda (key cgi)
     (let ([env-table (cgi:env-table cgi)])
-      (hash-ref env-table key)
-      )))
+      (hash-ref env-table key))))
 
 (define cgi-env-set!
   (lambda (cgi key value)
     (let ([env-table (cgi:env-table cgi)])
-      (hash-set! env-table key value)
-      )))
+      (hash-set! env-table key value))))
 
 (define-syntax-rule (generate-cgi-cmd cgi)
   (let ([QUERY_STRING (cgi-env-get "QUERY_STRING" cgi)]
-	[conn-socket (cgi:conn-socket cgi)]
-	)
+	[conn-socket (cgi:conn-socket cgi)])
     ;; if QUERY_STRING is not #f ,that means method is POST
     ;; FIXME: we should use REQUEST_METHOD to decide.
     (if QUERY_STRING
@@ -223,29 +211,25 @@
     (assert (cgi-record? cgi))
     (let* ([target (cgi:target cgi)]
 	   [envs (generate-cgi-cmd QUERY_STRING)]
-	   [pipe (open-pipe* OPEN_BOTH envs target)] 
-	   )
+	   [pipe (open-pipe* OPEN_BOTH envs target)])
 
       ;; set charset
       (set-port-encoding! pipe charset)
        
       (let* ([bv (get-bytevector-all pipe)]
 	     [size (bytevector-length bv)]
-	     [fst (stat (cgi:target cgi))]
-	     )
+	     [fst (stat (cgi:target cgi))])
 	(close pipe)
 	(values bv
 		*OK*
-		(record-real-bv-size fst size))
-	))))
+		(record-real-bv-size fst size))))))
 		    
 (define ragnarok-regular-cgi-handler
   (lambda (cgi charset)
     (assert (cgi-record? cgi))
     (if (not (check-file-perms (cgi:target cgi) #o555)) ;; DON'T use "access?"
 	(values #f *Forbidden* #f) ;; no excute perms
-	(regular-cgi-run cgi charset)
-	)))
+	(regular-cgi-run cgi charset))))
 
 (define (cgi:auth-type! cgi-env-table v)
   (hash-set! cgi-env-table "AUTH_TYPE" v))

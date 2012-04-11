@@ -22,8 +22,7 @@
   #:use-module (ragnarok utils)
   #:use-module (oop goops)
   #:use-module (ice-9 getopt-long)
-  #:export (main)
-  )
+  #:export (main))
 
 (define ragnarok-env (make <env>))
 
@@ -48,8 +47,7 @@
   '((version (single-char #\v) (value #f))
     (help (single-char #\h) (value #f))
     (config (single-char #\c) (value #f)) ;; specify config file
-    (server (single-char #\s) (value #f)) ;; specify sub-servers to start
-    ))
+    (server (single-char #\s) (value #f)))) ;; specify sub-servers to start
 
 (define help-str
   "
@@ -86,8 +84,7 @@ God bless hacking.~%"
 
 (define (show-help)
   (display help-str)
-  (exit)
-  )
+  (exit))
 
 (define (show-version)
   (display version-str)
@@ -97,12 +94,10 @@ God bless hacking.~%"
 (define ragnarok-log-message
   (lambda (message)
     (let* ([lf (open-file *ragnarok-log-file* "a")]
-	   [cgt (get-global-current-time)]
-	   )
+	   [cgt (get-global-current-time)])
       (if lf
 	  (format lf "~a at ~a~%" message cgt))
-      (close lf)
-      )))
+      (close lf))))
 
 (define (ragnarok-kill-all-servers)
   (let ([server-list (env:server-list ragnarok-env)])
@@ -112,8 +107,7 @@ God bless hacking.~%"
 
 (define (ragnarok-terminate-environ)
   ;; TODO: terminate environ
-  (ragnarok-kill-all-servers)
-  )
+  (ragnarok-kill-all-servers))
 
 (define ragnarok-SIGHUP-handler
   (lambda (msg)
@@ -128,8 +122,7 @@ God bless hacking.~%"
     (ragnarok-unlock)
     (sync)
     ;;(format #t "well~quit")
-    (exit)
-    ))
+    (exit)))
 
 (define (signal-register)
   (sigaction SIGCHLD SIG_IGN) ;; ignore child
@@ -138,9 +131,8 @@ God bless hacking.~%"
   (sigaction SIGTTIN SIG_IGN) ;;
   (sigaction SIGPIPE SIG_IGN) ;; avoid thread to be killed when client breaks
   (sigaction SIGHUP ragnarok-SIGHUP-handler) ;; catch hangup signal
-  (sigaction SIGTERM ragnarok-SIGTERM-handler) ;; catch kill signal
-  )
-
+  (sigaction SIGTERM ragnarok-SIGTERM-handler)) ;; catch kill signal
+  
 (define (ragnarok-server-start)
   (let* ([snl (get-sub-server-name-list)]
 	 [cnt (length snl)])
@@ -170,13 +162,11 @@ God bless hacking.~%"
   (display "===================")
   (newline)
   (format #t "Ragnarok starting...~%")
-  (format #t "If you want to check the log, type ragnarok-show-[err/log]~%")
-  )
+  (format #t "If you want to check the log, type ragnarok-show-[err/log]~%~!"))
 
 (define (show-subserver-info)
   (let* ([snl (get-sub-server-name-list)]
-	 [cnt (length snl)]
-	 )
+	 [cnt (length snl)])
     (format #t "Find ~a sub-servers from you machine:~%" cnt)
     (for-each (lambda (sname)
 		(format #t "[~a] " sname))
@@ -195,8 +185,7 @@ God bless hacking.~%"
 	   (config-file
 	    (option-ref options 'config "/etc/ragnarok/server.conf"))
 	   (server-list
-	    (option-ref options 'server #f))
-	   )
+	    (option-ref options 'server #f)))
 
       (cond
        (need-help? (show-help))
@@ -260,8 +249,7 @@ God bless hacking.~%"
       (ragnarok-server-start)
 
       ;; never quit
-      (eternal-loop)
-      )))
+      (eternal-loop))))
 
 (define (eternal-loop)
   (sleep 1000) ;; to avoid high cpu usage 

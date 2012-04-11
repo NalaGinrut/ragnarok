@@ -39,8 +39,7 @@
 	    #:allocation #:virtual
 	    #:slot-ref (lambda (o)
 			 (let* ([name (logger:name o)]
-				[path (logger:path o)]
-				)
+				[path (logger:path o)])
 			   (string-append path "/" "ragnarok." name ".log")))
 	    ;; why do this? If server name changed, 
 	    ;; log name also changed on the fly~
@@ -64,8 +63,7 @@
 	(log-printer msg port)
 	(print-to-all-ports 
 	 msg 
-	 (cons `(log-port ,port)
-	       *log-ports*)))))
+	 (cons `(log-port ,port) *log-ports*)))))
 
 (define-method (logger:printer (self <logger>) (err-status <symbol>))
   (err-printer (symbol->string err-status) (logger:port self)))
@@ -81,13 +79,11 @@
 	 [log-file (logger:filename self)]
 	 [port (logger:open-proper-port status-show log-file)]
 	 [path (logger:path self)]
-	 [msg (make-log-msg now 'init-logger "Logger init!")]
-	 )
+	 [msg (make-log-msg now 'init-logger "Logger init!")])
     (or (file-exists? path)
 	(mkdir path))
     (set! (logger:port self) port)
-    (log-printer msg port)
-    ))
+    (log-printer msg port)))
 
 (define log-printer
   (lambda (msg port)
@@ -96,8 +92,7 @@
 
     (let* ([time (msg:time msg)]
 	   [type (object->string (msg:type msg))]
-	   [info (msg:info msg)]
-	   )
+	   [info (msg:info msg)])
       (ragnarok-exclusive-try
        (format port "~a:~% [~a] ~a~%~!" time type info))
       
@@ -129,8 +124,7 @@
 		    "open file failed!" 
 		    filename))))
       (else 
-       (error logger:open-proper-port "invalid port request:" which)
-       ))))
+       (error logger:open-proper-port "invalid port request:" which)))))
     
 ;; NOTE: use this procedure to generate log file suffix.
 ;; TODO: we need a periodical log archive procedure.

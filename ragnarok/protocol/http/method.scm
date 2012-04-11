@@ -29,9 +29,7 @@
 	     http-method-OPTIONS-handler
 	     http-method-TRACE-handler
 	     http-method-PATCH-handler
-	     http-method-GET-handler
-	     )
-  )
+	     http-method-GET-handler))
 
 (define get-type-from-mime (@ (ragnarok protocol http mime) get-type-from-mime))
 (define get-mime-handler (@ (ragnarok protocol http mime) get-mime-handler))
@@ -46,18 +44,15 @@
 (define run-with-CGI?
   (lambda (ext config)
     (let ([ext-list (get-config config 'with-cgi)])
-      (list-has? ext-list ext)
-      )))
+      (list-has? ext-list ext))))
 
 (define http-method-POST-handler
   (lambda (logger server-info)
-    #t
-    ))
+    #t))
 
 (define http-method-DELETE-handler
   (lambda (logger server-info)
-    #t
-    ))
+    #t))
 
 ;; returned as GET but without content
 (define http-method-HEAD-handler
@@ -68,29 +63,27 @@
 	(lambda ()
 	  (http-method-GET-handler logger server-info))
       (lambda (bv bv-len status type etag mtime)
-       	(values #f bv-len status type etag mtime)))
-    ))
+       	(values #f bv-len status type etag mtime)))))
 
 (define http-method-PUT-handler
   (lambda (logger server-info)
-    #t
-    ))
+    #t))
+
 (define http-method-CONNECT-handler
   (lambda (logger server-info)
-    #t
-    ))
+    #t))
+
 (define http-method-OPTIONS-handler
   (lambda (logger server-info)
-    #t
-    ))
+    #t))
+
 (define http-method-TRACE-handler
   (lambda (logger server-info)
-    #t
-    ))
+    #t))
+
 (define http-method-PATCH-handler
   (lambda (logger server-info)
-    #t
-    ))
+    #t))
 
 (define http-method-GET-handler
   (lambda (logger server-info)
@@ -105,8 +98,7 @@
 	   ;; FIXME: I need this m-handler later
 	   [mime (get-request-mime file)]
 	   [script-run-with-CGI (run-with-CGI? mime config)]
-	   [m-handler (get-mime-handler mime)]
-	   )
+	   [m-handler (get-mime-handler mime)])
 
       ;;(m-handler logger file) 
       ;; TODO: I need a MIME module, and a mime-list to get MIME
@@ -138,8 +130,7 @@
 						  server-info)))
 	      (else
 	       ;; deal with files
-	       (m-handler logger file server-info)
-	       )))
+	       (m-handler logger file server-info))))
 	(lambda (bv status fst etag *not-html*)
 	  (let* ([type (or 
 			(and *not-html* (get-type-from-mime mime))
@@ -151,11 +142,8 @@
 				 #f))] ;; do as dir handle.
 		 [mtime (if fst 
 			    (stat:mtime fst)
-			    (stat:mtime (stat file)))] ;; return dir's mtime
-		 )
-	    (values bv bv-len status type etag mtime))
-	  ))
-      )))
+			    (stat:mtime (stat file)))]) ;; return dir's mtime
+	    (values bv bv-len status type etag mtime)))))))
 
 (define *method-handler-list*
   `(("GET" ,http-method-GET-handler)
@@ -166,7 +154,6 @@
     ("CONNECT" ,http-method-CONNECT-handler)
     ("OPTIONS" ,http-method-OPTIONS-handler)
     ("TRACE" ,http-method-TRACE-handler)
-    ("PATCH" ,http-method-PATCH-handler)
-    ))
+    ("PATCH" ,http-method-PATCH-handler)))
 
 

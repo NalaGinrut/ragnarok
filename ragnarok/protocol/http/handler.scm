@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -24,9 +24,7 @@
   #:autoload (rnrs io ports) (get-bytevector-all get-string-all)
   #:export (http-directory-serv-handler
 	    http-static-page-serv-handler
-	    http-regular-cgi-handler
-	    )
-  )
+	    http-regular-cgi-handler))
 
 (define open-pipe (@ (ice-9 popen) open-pipe))
 (define close-pipe (@ (ice-9 popen) close-pipe))
@@ -57,8 +55,7 @@
 (define http-regular-cgi-handler
   (lambda (logger filename server-info)
     (let* ([subserver-info (server-info:subserver-info server-info)]
-	   [charset (subserver-info:server-charset subserver-info)]
-	   )
+	   [charset (subserver-info:server-charset subserver-info)])
       (call-with-values
 	  (lambda ()
 	    (if (file-exists? filename)
@@ -66,14 +63,10 @@
 		 (http-make-cgi-type filename server-info)
 		 charset)
 		;; file doesn't exist ,throw *Not-Found*
-		(http-error-page-serv-handler logger *Not-Found* server-info)
-		)
-	    );; end lambda()
+		(http-error-page-serv-handler logger *Not-Found* server-info)))
 	(lambda (bv status fst)
 	  (http-response-log logger status)
-	  (values bv status fst *no-ETag* *dynamic*))
-	);; end call-with-values
-      )))
+	  (values bv status fst *no-ETag* *dynamic*))))))
       
 (define http-static-page-serv-handler
   (lambda (logger filename server-info)
@@ -90,11 +83,8 @@
 	(let* ([mtime (if fst 
 			  (stat:mtime fst)
 			  (stat:mtime (stat file)))] ;; return dir's mtime
-	       [etag (generate-etag bv mtime)]
-	       )
-	  (values bv status fst etag *static*)))
-      ) ;; end call-with-values
-    ))
+	       [etag (generate-etag bv mtime)])
+	  (values bv status fst etag *static*))))))
     
 ;;-------serv handler end-----------------
 
@@ -104,22 +94,19 @@
 (define get-static-page
   (lambda (logger target)
     (let* ([fst (stat target)]
-	   [ok (check-file-perms target #o444)]
-	   )
+	   [ok (check-file-perms target #o444)])
       
       (if ok
 	  (values (get-bytevector-all 
 		   (open-file target "r"))
 		  *OK*
 		  fst)
-	  (http-error-page-serv-handler logger *Forbidden*))
-     )))
+	  (http-error-page-serv-handler logger *Forbidden*)))))
 
 (define get-directory-in-html
   (lambda (logger dir)
     (let* ([fst (stat dir)]
-	   [ok (check-file-perms dir #o555)]
-	   )
+	   [ok (check-file-perms dir #o555)])
       ;; TODO: 
       ;; 1. check the access permission;
       ;; 2. print direcory content as a html; -use ftw
@@ -144,13 +131,11 @@
 	      fst))
 	  
 	  ;; return Forbidden page
-	  (http-error-page-serv-handler logger *Forbidden*)
-	  ))))
+	  (http-error-page-serv-handler logger *Forbidden*)))))
 ;;-------method handler end-----------------
 
 (define generate-etag
   (lambda (bv mtime)
     ;; TODO: generate etag, now it just return a null string.
-    (format #f "")
-    ))
+    (format #f "")))
 

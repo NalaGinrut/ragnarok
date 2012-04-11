@@ -14,8 +14,7 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok protocol eips hook)
-  #:export (init-hook)
-  )
+  #:export (init-hook))
 
 (define (init-hook)
   #t

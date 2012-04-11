@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -14,8 +14,7 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok protocol http status)
-  #:use-module (ragnarok utils)
-  )
+  #:use-module (ragnarok utils))
 
 (module-export-all! (current-module))
 
@@ -134,8 +133,7 @@
 	  "*Status-505* HTTP Version Not Supported!" #f))
     ;; 15xx
     (1500 ("Fork Error" "*Status-1500* Fork Error!" #f))
-    (1501 ("CGI-Not-Allowed" "*Status-1501* CGI Not Allowed" "1501.html"))
-    ))
+    (1501 ("CGI-Not-Allowed" "*Status-1501* CGI Not Allowed" "1501.html"))))
 
 (define http-get-reason-from-status
   (lambda (status)

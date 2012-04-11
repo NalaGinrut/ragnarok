@@ -44,8 +44,7 @@
   (file request:file)
   (qstr request:query-string) 
   (version request:version)
-  (headers request:headers)
-  )
+  (headers request:headers))
   
 (define parse-first-line
   (lambda (port)
@@ -59,8 +58,7 @@
 	   [qstr (cadr tl)]
 	   [version (cadr (string-split proto #\/))] 
 	   )
-      (values method file qstr version)
-      )))
+      (values method file qstr version))))
 
 
     

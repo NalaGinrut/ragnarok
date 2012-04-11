@@ -21,9 +21,7 @@
   #:use-module (oop goops)
   #:export (<env>
 	    env:handler-list env:reload-handler-list
-	    env:server-list
-	    )
-  )
+	    env:server-list))
 
 (define-class <env> ()
 
@@ -35,16 +33,14 @@
   (server-list #:init-value '() #:accessor env:server-list
 	       #:allocation #:class)
 
-  (server-version #:init-value *ragnarok-version* #:accessor env:version)
-  )
+  (server-version #:init-value *ragnarok-version* #:accessor env:version))
 
 (define-method (initialize (self <env>) . initargs)
   (next-method)
   (hook-list-init)
   
   ;; read config and generate the config table for each active sub-server
-  (gen-conf-table)
-  )
+  (gen-conf-table))
 
   
   

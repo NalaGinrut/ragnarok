@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -14,8 +14,7 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok protocol http hook)
-  #:export (init-hook)
-  )
+  #:export (init-hook))
 
 (define (init-hook)
   ((@ (ragnarok protocol http mime) init-mime))

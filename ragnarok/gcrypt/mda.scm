@@ -1,4 +1,4 @@
-;;  Copyright (C) 2011  
+;;  Copyright (C) 2011-2012  
 ;;      "Mu Lei" known as "NalaGinrut" <NalaGinrut@gmail.com>
 ;;  Ragnarok is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -16,8 +16,7 @@
 
 (define-module (ragnarok gcrypt mda)
   #:use-module (ragnarok utils)
-  #:export (
-	    gcrypt:md5
+  #:export (gcrypt:md5
 	    gcrypt:sha1
 ;;	    gcrypt:rmd160
 ;;	    gcrypt:md2
@@ -34,8 +33,7 @@
 ;;	    gcrypt:whirlpool 
 ;;	    gcrypt:tiger1
 ;;	    gcrypt:tiger2
-	    )
-  )
+	    ))
 
 ;; (gcrypt:algo str) ==> digest string
   
