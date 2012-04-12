@@ -56,8 +56,7 @@
   (write-list #:init-value '() #:accessor server:write-list)
   (except-list #:init-value '() #:accessor server:except-list)
   (timeout #:init-value #f #:accessor server:timeout)
-  (ready-list #:init-value '() #:accessor server:ready-list)
-  )
+  (ready-list #:init-value '() #:accessor server:ready-list))
 
 (define-method (initialize (self <server>) initargs)
   (next-method) ;; call regular routine
@@ -70,8 +69,7 @@
 	 [protocol (hash-ref config 'protocol)]
 	 [max-events (hash-ref config 'max-events)]
 	 [triger (hash-ref config 'triger)]
-	 [handler (get-handler handler-list protocol)]
-	 )
+	 [handler (get-handler handler-list protocol)])
     ;; NOTE: init order is important!
     ;;     1. init all properties
     ;;     2. init event system
@@ -101,8 +99,7 @@
 	(error initialize "<server>: protocol hasn't been implemented yet!" protocol))
 
     ;; update env's servers list
-    (server:add-to-env self)
-    ))
+    (server:add-to-env self)))
 
 (define-method (server:get-config (self <server>) var)
   (let ((conf (server:config self)))
@@ -251,7 +248,7 @@
     ;;        listen-socket is ready. The better solution would be a thread pool
     ;;        with a work-queue.
     (cond
-     ((not ready-list)
+     ((or (not ready-list) (not (list? ready-list)))
       ;; if no event then return #f
       (error "invalid ready-list type, it should be a list!")) 
      ((assoc listen-fd ready-list)

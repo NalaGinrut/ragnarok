@@ -72,7 +72,7 @@ God bless hacking.\n
 ~a. 
 
 Copyright (C) 2011-2012 Mu Lei known as \"NalaGinrut\" <NalaGinrut@gmail.com>
-License LGPLv3+: GNU GPL 3 or later <http://gnu.org/licenses/gpl.html>.
+License GPLv3+: GNU GPL 3 or later <http://gnu.org/licenses/gpl.html>.
 Ragnarok is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 
@@ -88,8 +88,7 @@ God bless hacking.~%"
 
 (define (show-version)
   (display version-str)
-  (exit)
-  )
+  (exit))
 
 (define ragnarok-log-message
   (lambda (message)
@@ -171,8 +170,7 @@ God bless hacking.~%"
     (for-each (lambda (sname)
 		(format #t "[~a] " sname))
 	      snl)
-    (newline)
-    ))
+    (newline)))
 
 (define main
   (lambda (args)
@@ -192,11 +190,10 @@ God bless hacking.~%"
        (need-version? (show-version)))
       
       ;; daemonize
-      (let ([i (ragnarok-fork)])
+      (let ([i (primitive-fork)])
 	(cond
 	 ((> i 0) (primitive-exit)) ;; exit parent
-	 ((< i 0) (error "Ragnarok: fork error!")))
-	)
+	 ((< i 0) (error "Ragnarok: fork error!"))))
 
       ;; print greeting message
       (display-startup-message)

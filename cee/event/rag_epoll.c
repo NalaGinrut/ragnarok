@@ -258,12 +258,13 @@ SCM scm_ragnarok_epoll_wait(SCM event_set ,SCM second ,SCM msecond)
 		 RAG_ERR2STR(errno));	
     }
 
-  while(nfds--)
+  while(nfds > 0)
     {
       fd = es->ee_set[nfds].data.fd;
       op = es->ee_set[nfds].events;
       cons = scm_cons(scm_from_int(fd) ,scm_from_int(op));
       ret = scm_cons(cons ,ret);
+      nfds--;
     }
 
   return ret;
