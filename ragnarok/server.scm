@@ -258,6 +258,8 @@
 
 (define-method (server:update-ready-list (self <server>))
   (let ([ready-list (server:get-request-events self)])
+    (and (not (list? ready-list))
+	 (error "updated an invalid ready-list!")) 
     (set! (server:ready-list self) ready-list)
     ready-list))
 	
