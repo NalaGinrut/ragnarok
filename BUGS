@@ -9,3 +9,7 @@
 
 * This should throw an *Internal Error* but it causes client halt:
   <%= not-a-bounded-symbol %>
+
+* We ignored SIGPIPE when pipe broken occures. Then ragnarok won't crash when remote
+  connection down. But we didn't handle the PIPE situation properly, which may causes
+  efficiency problems and other issues.
