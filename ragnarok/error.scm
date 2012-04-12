@@ -45,10 +45,15 @@
 (define-syntax format-error-msg
   (syntax-rules ()
     ((_ key fmt)
-     (format #f "[~a] ~a" key fmt))))
+     (format #f "[~a] ~a~%~!" key fmt))))
 
+;; NOTE: print-error-msg shouldn't exit, or we can hardly debug
+;; FIXME: this proc doesn't print out other msgs except first error arg.
+;;        say, only err-proc name.
 (define ragnarok-print-error-msg
   (lambda (k . e)
-    (apply format #t `(,(format-error-msg k (car e)) ,@(cdr e)))
-    (primitive-exit 11)))
+    (apply format #t `(,(format-error-msg k (car e)) ,@(cdr e)))))
+
+;; TODO: but we really need a critical-error-handler to throw errmsg then exit
+
  
