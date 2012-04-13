@@ -16,7 +16,6 @@
 (define-module (ragnarok aio)
   #:use-module (ragnarok utils)
   #:use-module (ragnarok error)
-  #:use-module (ice-9 rw)
   #:autoload (rnrs io ports) (put-bytevector
 			      get-bytevector-n
 			      call-with-bytevector-output-port)
@@ -52,7 +51,7 @@
        do (lambda e
 	    (let ([E (get-errno e)])
 	      (cond
-	       ((= E EAGAIN) 
+	       ((or (= E EAGAIN) (= E EWOULDBLOCK)) 
 		(yield))
 	       ((= E EINTR)
 		(error "aio read was interrupted by user!"))
@@ -63,8 +62,7 @@
 ;; FIXME: There should be a counterpart of (ice-9 rw) for bytevector.
 ;;        I believe utf8->string is too heavy for a big bytevector.
 (define* (async-write bv write-port #:key (block 4096))
-  (let ([str (utf8->string bv)]
-	[len (string-length str)]
+  (let ([len (bytevector-length bv)]
 	[begin 0]
 	[end 0]
 	[write-len 1]) ;; set it to 1 to avoid being 0, but it won't do any harm.
@@ -73,20 +71,23 @@
        (< begin len)
        (ragnarok-try
 	(begin
-	  (let ([rest (if (<= end len)
-			  (substring/shared str begin end)
-			  (ragnarok-throw "async-write: impossible write-len" 
-					  write-len begin end len))])
+	  (let* ([buf (make-bytevector len)]
+		 [rest (and (<= end len)
+			    ;; FIXME: we need sub-bytevector/shared
+			    (bytevector-copy! str begin buf 0 buf-len)
+			    (ragnarok-throw "async-write: impossible write-len" 
+					    write-len begin end len))])
 	    (if (> write-len 0)
 		(begin
-		  (set! write-len (write-string!/partial rest write-port))
+		  (set! write-len (send write-port rest))
+		  (set! len (- len write-len))
 		  (set! end (+ begin write-len))
 		  (set! begin end)))))
 	catch #t
 	do (lambda e
 	     (let ([E (get-errno e)])
 	       (cond
-		((= E EAGAIN)
+		((or (= E EAGAIN) (= E EWOULDBLOCK))
 		 (force-output port)
 		 (yield)) 
 		((= E EINTR)

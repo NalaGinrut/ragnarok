@@ -238,6 +238,7 @@ SCM scm_ragnarok_select_handler(SCM event_set_list ,SCM second ,SCM msecond)
   /* FIXME: How can I handle other type?
    */
 
+  // FIXME: select need us count the MAX fd then +1, now I haven't done this yet.
   return scm_ragnarok_select(scm_from_int(fd) ,rs ,ws ,es ,second ,msecond);
 }
 #undef FUNC_NAME
