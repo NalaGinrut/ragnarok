@@ -15,7 +15,7 @@
 
 (define-module (ragnarok utils)
   #:autoload (srfi srfi-1) (iota)
-  #:autoload (rnrs base) (div-and-mod)
+  #:autoload (rnrs base) (div div-and-mod)
   #:autoload (rnrs bytevectors) (string->utf8 bytevector-length)
   #:autoload (rnrs io ports) (get-bytevector-all get-string-all)
   #:autoload (rnrs) (enum-set-indexer)
@@ -318,5 +318,12 @@
 	 (lambda () (setlocale i c))
 	 (lambda () (begin e0 e1 ...))
 	 (lambda () (setlocale i old))))))
+
+(define (time-get-time)
+  (let ((tv (gettimeofday)))
+    (+ (* (- (car tv) 1000000000) 1000) (div (cdr tv) 1000))))
+
+(define-macro (call-with-return thunk) 
+  `(call/cc (lambda (return) (,thunk))))
 
 
