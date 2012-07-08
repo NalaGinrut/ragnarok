@@ -201,15 +201,15 @@ God bless hacking.~%"
       ;; child(daemon) continue
       (setsid)
 
-      (if (not (file-exists? *ragnarok-running-dir*))
-	  (mkdir *ragnarok-running-dir*))
+      (and (not (file-exists? *ragnarok-running-dir*))
+	   (mkdir *ragnarok-running-dir*))
       (chdir *ragnarok-running-dir*)
 
       ;; delete old err log file ,or it will mess up with old-old err log
-      (if (file-exists? *ragnarok-err-log-file*)
-	  (delete-file *ragnarok-err-log-file*))
-      (if (file-exists? *ragnarok-log-file*)
-	  (delete-file *ragnarok-log-file*))
+      (and (file-exists? *ragnarok-err-log-file*)
+	   (delete-file *ragnarok-err-log-file*))
+      (and (file-exists? *ragnarok-log-file*)
+	   (delete-file *ragnarok-log-file*))
 
       (let* ([i (open "/dev/null" O_RDWR)]
 	     [e (open *ragnarok-err-log-file* (logior O_CREAT O_RDWR))] 
