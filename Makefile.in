@@ -57,11 +57,11 @@ $(MOD)/version.scm:
 .PHONY: clean modules install distclean distclean-mk bin version test gen-mime
 
 clean:
-	-rm -frd $(OBJ)
-	-rm -frd *.log
+	-rm -fr $(OBJ)
+	-rm -fr *.log
 	-rm -rf autom4te.cache
 	-rm -rf $(MOD)/version.scm
-	-rm -rfd $(MOD_TMP_PATH)
+	-rm -rf $(MOD_TMP_PATH)
 
 clean-config:
 	-rm -rf config.{h,log}
