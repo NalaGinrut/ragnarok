@@ -59,3 +59,6 @@ cscope.files
 *.am
 *.d
 version.scm
+*.m4
+ltmain.sh
+libtool
