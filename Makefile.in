@@ -68,7 +68,7 @@ clean-config:
 	-rm -rf configure
 
 install: $(ALL_TARGETS)
-	cp -frdp $(OBJ)/*.so /usr/local/lib/
+	cp -frdp $(OBJ)/*.so $(PREFIX)/lib
 	cp -frdp $(MOD) $(MOD_PATH)
 	$(INSTALL) -m 755 -d $(MOD_TARGET_PATH)
 	cp -frdp $(MOD_OBJ)/* $(MOD_TARGET_PATH)
