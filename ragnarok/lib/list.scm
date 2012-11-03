@@ -15,25 +15,83 @@
 
 (define-module (ragnarok lib list)
   #:use-module (ice-9 q)
-  #:use-module (oop goops)
-  #:export (<mmr-list>
-	    mmr-list:head! mmr-list:tail! mmr-list:head-out! mmr-list:tail-out!
-	    <mmr-queue> 
-	    <mmr-stack>)
+  #:use-module (oop goops))
+
+(module-export-all! (current-module))
 
 (define-class <mmr-list> ()
-  (priv #:init-thunk make-q #:accessor mmr-list:priv))
+  (priv #:init-thunk make-q #:accessor priv)
+  (count #:init-value 0 #:getter count #:setter count!)
+  (mutex #:init-thunk make-mutex #:getter mutex))
 
-(define-method (mmr-list:head! (self <mmr-list>) elem)
-  (q-push! (mmr-list:priv self) elem))
+(define-method (lock-tree! (self <mmr-list>))
+  (lock-mutex (mutex self)))
 
-(define-method (mmr-list:tail! (self <mmr-list) elem)
-  (enq! (mmr-list:priv self) elem))
+(define-method (unlock-tree! (self <mmr-list>))
+  (unlock-mutex (mutex self)))
 
-(define-method (mmr-list:head-out! (self <mmr-list>))
-  (deq! (mmr-list:priv self)))
+(define-method (call-with-exclusivly (self <mmr-list>) (thunk <procedure>))
+  (with-mutex (mutex self) (thunk)))
 
-(define-method (mmr-list:tail-out! (self <mmr-list>))
-  (drop-right! (mmr-list:priv self) 1))
+(define-method (count++ (self <mmr-list>))
+  (count! self (1+ (count self))))
+
+(define-method (count-- (self <mmr-list>))
+  (and (<= (count self) 0) (error "mmr-list: count <= 0"))
+  (count! self (1- (count self))))
+
+(define-method (empty? (self <mmr-list>))
+  (or (and (q-empty? (priv self)) (= (count self) 0))
+      (error "mmr-list: invalid empty list")))
+
+(define-method (to-head! (self <mmr-list>) elem)
+  (q-push! (priv self) elem)
+  (count++ self))
+
+;; NOTE: enq! won't traverse the whole list. It actually stored the pointer to the last cell.
+;; ((1 2 3) 3), in this example, cdr 3 is not a simple number, it's the pointer of last cell of '(1 2 3)
+;;       ^  |   And the 'magic' is last-pair, it can get the ponter of the last cell.
+;;       |==|
+(define-method (to-tail! (self <mmr-list) elem)
+  (enq! (priv self) elem)
+  (count++ self))
+
+(define-method (head-out! (self <mmr-list>))
+  (if (empty? self)
+      #f
+      (begin
+	(deq! (priv self))
+	(count-- self))))
+
+(define-method (head (self <mmr-list>))
+  (q-front (priv self)))
+
+(define-method (tail (self <mmr-list>))
+  (q-rear (priv self)))
+
+;;-------- queue 
+(define-class <mmr-queue> (<mmr-list>))
+
+(define-method (top (self <mmr-queue>))
+  (tail self))
+
+(define-method (in (self <mmr-queue>) elem)
+  (to-tail! self elem))
+
+(define-method (out (self <mmr-queue>))
+  (head-out! self elem))
+
+;;-------- stack
+(define-class <mmr-stack> (<mmr-list>))
+
+(define-method (top (self <mmr-stack>))
+  (head self))
+
+(define-method (push (self <mmr-stack>) elem)
+  (to-head! self elem))
+
+(define-method (pop (self <mmr-stack>))
+  (head-out! self elem))
+
 
 
