@@ -19,10 +19,26 @@
 
 (module-export-all! (current-module))
 
+(define (list->q l) (cons l (last-pair l)))
+(define (q->list q) (car q))
+
 (define-class <mmr-list> ()
-  (priv #:init-thunk make-q #:accessor priv)
+  (priv #:init-thunk make-q #:getter priv #:setter priv!) 
   (count #:init-value 0 #:getter count #:setter count!)
   (mutex #:init-thunk make-mutex #:getter mutex))
+
+(define-method (initialize (self <mmr-list>) args)
+  (next-method)
+  (display args)
+  (priv! self (list->q args)) 
+  (count! self (q-length (priv self))))
+
+(define-generic map)
+(define-method (map (proc <procedure>) (self <mmr-list>) . args)
+  (let* ((ll (if (null? args) args (map (lambda (x) (car (priv x))) args)))
+	 (p (car (priv self)))
+	 (v (list->q (apply map proc p ll))))
+    (make <mmr-stack> #:value v)))
 
 (define-method (lock-tree! (self <mmr-list>))
   (lock-mutex (mutex self)))
@@ -52,7 +68,7 @@
 ;; ((1 2 3) 3), in this example, cdr 3 is not a simple number, it's the pointer of last cell of '(1 2 3)
 ;;       ^  |   And the 'magic' is last-pair, it can get the ponter of the last cell.
 ;;       |==|
-(define-method (to-tail! (self <mmr-list) elem)
+(define-method (to-tail! (self <mmr-list>) elem)
   (enq! (priv self) elem)
   (count++ self))
 
@@ -79,7 +95,7 @@
   (to-tail! self elem))
 
 (define-method (out (self <mmr-queue>))
-  (head-out! self elem))
+  (head-out! self))
 
 ;;-------- stack
 (define-class <mmr-stack> (<mmr-list>))
@@ -91,7 +107,7 @@
   (to-head! self elem))
 
 (define-method (pop (self <mmr-stack>))
-  (head-out! self elem))
+  (head-out! self))
 
 
 
