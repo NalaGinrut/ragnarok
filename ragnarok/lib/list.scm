@@ -27,11 +27,9 @@
   (count #:init-value 0 #:getter count #:setter count!)
   (mutex #:init-thunk make-mutex #:getter mutex))
 
-(define-method (initialize (self <mmr-list>) args)
-  (next-method)
-  (display args)
-  (priv! self (list->q args)) 
-  (count! self (q-length (priv self))))
+(define-method (insert-from-list! (self <mmr-list>) (ll <list>))
+  (priv! self (list->q ll))
+  (count! self (length ll)))
 
 (define-generic map)
 (define-method (map (proc <procedure>) (self <mmr-list>) . args)
@@ -49,10 +47,10 @@
 (define-method (call-with-exclusivly (self <mmr-list>) (thunk <procedure>))
   (with-mutex (mutex self) (thunk)))
 
-(define-method (count++ (self <mmr-list>))
+(define-method (count++! (self <mmr-list>))
   (count! self (1+ (count self))))
 
-(define-method (count-- (self <mmr-list>))
+(define-method (count--! (self <mmr-list>))
   (and (<= (count self) 0) (error "mmr-list: count <= 0"))
   (count! self (1- (count self))))
 
@@ -62,7 +60,7 @@
 
 (define-method (to-head! (self <mmr-list>) elem)
   (q-push! (priv self) elem)
-  (count++ self))
+  (count++! self))
 
 ;; NOTE: enq! won't traverse the whole list. It actually stored the pointer to the last cell.
 ;; ((1 2 3) 3), in this example, cdr 3 is not a simple number, it's the pointer of last cell of '(1 2 3)
@@ -70,14 +68,14 @@
 ;;       |==|
 (define-method (to-tail! (self <mmr-list>) elem)
   (enq! (priv self) elem)
-  (count++ self))
+  (count++! self))
 
 (define-method (head-out! (self <mmr-list>))
   (if (empty? self)
       #f
       (begin
 	(deq! (priv self))
-	(count-- self))))
+	(count--! self))))
 
 (define-method (head (self <mmr-list>))
   (q-front (priv self)))
