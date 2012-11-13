@@ -104,17 +104,18 @@
 ;;--- rb tree ---
 (define-class <mmr-rbtree> (<mmr-tree> <mmr-rbnode>))
 
-(define-method (empty? (self <mmr-rbtree>))
-  (leaf? self))  ;; if root is leaf, it means an empty tree.
-
 (define-method (insert! (self <mmr-rbtree>) k v)
   (if (empty? self)
       (begin
 	(value! self v)
 	(key! self k)
 	(color! self BLACK))
-      (insert-node! self (make #:key k #:value v)))
+      (insert-node! self (make <mmr-rbnode> #:key k #:value v)))
   (count++! self))
+
+(define is-leaf?
+  (lambda (node)
+    (and node (leaf? node))))
 
 (define insert-node! 
   (lambda (rbt node)
@@ -143,21 +144,26 @@
 
 (define inner-insert!
   (lambda (rbt k v)
-    (let ((r ((compare rbt) k v)))
-    (cond
-     ((< r 0) 
-      (if (leaf? (left rbt))
-	  (begin
-	    (insert-left! rbt k v)
-	    rbt)
-	  (inner-insert! (left rbt) k v)))
-     ((> r 0) 
-      (if (leaf? (right rbt))
-	  (begin
-	    (insert-right! rbt k v)
-	    rbt)
-	  (inner-insert! (right rbt) k v)))
-     (else (value! rbt v) rbt)))))
+    (if rbt
+	(let ((r ((compare rbt) k (key rbt))))
+	  (cond
+	   ((< r 0) 
+	    (if (is-leaf? (left rbt))
+		(begin
+		  (insert-left! rbt k v)
+		  rbt)
+		(inner-insert! (left rbt) k v)))
+	   ((> r 0) 
+	    (if (is-leaf? (right rbt))
+		(begin
+		  (insert-right! rbt k v)
+		  rbt)
+		(inner-insert! (right rbt) k v)))
+	   (else (value! rbt v) rbt)))
+	(begin
+	  ;; FIXME: error when rbt==#f
+	  (value! rbt v)
+	  rbt))))
 
 (define inner-fixup
   (lambda (rbt)
@@ -177,7 +183,7 @@
 
 (define color-flip!
   (lambda (n)
-    (unless (leaf? n)
+    (unless (is-leaf? n)
       (let ([c (color n)])
 	(color! n (flip c)))))) 
 
@@ -193,43 +199,43 @@
 
 (define set-parent!
   (lambda (n p)
-    (unless (leaf? n)
+    (unless (is-leaf? n)
             (parent! n p))))
 
 (define set-child-left!
   (lambda (n1 n2)
-    (unless (leaf? n1)
+    (unless (is-leaf? n1)
             (left! n1 n2))))
 
 (define set-child-right!
   (lambda (n1 n2)
-    (unless (leaf? n1)
+    (unless (is-leaf? n1)
             (right! n1 n2))))
 
 (define right-child?
   (lambda (n)
-    (if (leaf? n)
+    (if (is-leaf? n)
         #f
         (let ([np (parent n)])
-          (if (leaf? np)
+          (if (is-leaf? np)
               #f
               (eq? (right np) n))))))
 
 (define set-red!
   (lambda (n)
-    (unless (leaf? n)
+    (unless (is-leaf? n)
             (color! n RED))))
 
 (define set-black!
   (lambda (n)
-    (unless (leaf? n)
+    (unless (is-leaf? n)
             (color! n BLACK))))
 
 ;; n1->color = n2->color
 (define get-color-from!
   (lambda (n1 n2)
-    (unless (leaf? n1)
-            (if (leaf? n2)
+    (unless (is-leaf? n1)
+            (if (is-leaf? n2)
                 (set-black! n1)
                 (color! n1 (color n2))))))
 
