@@ -14,7 +14,9 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok lib tree)
+  #:use-module (ragnarok utils)
   #:use-module (srfi srfi-9)
+  #:use-module (ice-9 threads)
   #:use-module (oop goops))
 
 (module-export-all! (current-module))
@@ -43,15 +45,19 @@
   (count #:init-value 0 #:getter count #:setter count!)
   (mutex #:init-thunk make-mutex #:getter mutex))
 
-(define-method (count++！ (self <mmr-tree>))
+(define-method (count++! (self <mmr-tree>))
   (count! self (1+ (count self))))
 
-(define-method (count--！ (self <mmr-tree>))
+(define-method (count--! (self <mmr-tree>))
   (and (<= (count self) 0) (error "rb-tree: count <= 0"))
   (count! self (1- (count self))))
 
+(define-method (root? (self <mmr-tree>))
+  (not (parent self)))
+
 (define-method (empty? (self <mmr-tree>))
-  (and (not (right self)) (not (left self)))
+  (and (root? self) (not (value self)) 
+       (not (right self)) (not (left self))))
 
 (define-method (call-with-exclusivly (self <mmr-tree>) (thunk <procedure>))
   (with-mutex (mutex self) (thunk)))
@@ -67,7 +73,7 @@
 (define BLACK 1)
 
 (define-class <mmr-rbnode> (<mmr-node>)
-  (color #:init-value #f #:init-keyword #:color #:getter color #:setter color!))
+  (color #:init-value BLACK #:init-keyword #:color #:getter color #:setter color!))
 
 (define-method (black? (self <mmr-rbnode>))
   (= (color self) BLACK))
@@ -88,7 +94,7 @@
   (lambda (k v)
     (make <mmr-rbnode> #:color BLACK #:key k #:value v)))
 
-(define new-black-node
+(define new-red-node
   (lambda (k v)
     (make <mmr-rbnode> #:color RED #:key k #:value v)))
 
@@ -96,34 +102,33 @@
 (define new-rb-node new-red-node)
 
 ;;--- rb tree ---
-(define-class <mmr-rbtree> (<mmr-rbnode>))
-
-(define-class (initialize (self <mmr-rbtree>) . args)
-  (next-method)
-  (color! self BLACK))  ;; root should be BLACK.
+(define-class <mmr-rbtree> (<mmr-tree> <mmr-rbnode>))
 
 (define-method (empty? (self <mmr-rbtree>))
   (leaf? self))  ;; if root is leaf, it means an empty tree.
 
-(define-method (insert (self <mmr-rbtree>) k v)
-  (insert self (make #:key k #:value v)))
-
-(define-method (insert (self <mmr-rbtree>) (node <mmr-rbnode>))
+(define-method (insert! (self <mmr-rbtree>) k v)
   (if (empty? self)
-      (value! self node)
-      (let ((it (inner-insert self (key node) (value node))))
-	(inner-fixup it)
+      (begin
+	(value! self v)
+	(key! self k)
 	(color! self BLACK))
-      (count++! self)
-      node))
+      (insert-node! self (make #:key k #:value v)))
+  (count++! self))
 
+(define insert-node! 
+  (lambda (rbt node)
+    (let ((it (inner-insert! rbt (key node) (value node))))
+      (inner-fixup it)
+      (color! rbt BLACK))))
+  
 (define-method (search (self <mmr-rbtree>) key)
   (if (empty? self) 
       #f
       (let ((r ((compare self) key (key self))))
 	(cond
-	 ((> r 0) (search (right self) comp key))
-	 ((< r 0) (search (left self) comp key))
+	 ((> r 0) (search (right self) key))
+	 ((< r 0) (search (left self) key))
 	 (else (value self))))))
 
 (define insert-left!
@@ -136,23 +141,23 @@
     (right! rbt (new-rb-node k v))
     (parent! (right rbt) rbt)))
 
-(define inner-insert
-  (lambda (rbt )
-    (let ((r (comp k v)))
+(define inner-insert!
+  (lambda (rbt k v)
+    (let ((r ((compare rbt) k v)))
     (cond
      ((< r 0) 
       (if (leaf? (left rbt))
 	  (begin
 	    (insert-left! rbt k v)
 	    rbt)
-	  (inner-insert (left rbt) k v)))
+	  (inner-insert! (left rbt) k v)))
      ((> r 0) 
       (if (leaf? (right rbt))
 	  (begin
 	    (insert-right! rbt k v)
 	    rbt)
-	  (inner-insert (rb-node:right en) k v)))
-     (else (rb-node:value! en v) en)))))
+	  (inner-insert! (right rbt) k v)))
+     (else (value! rbt v) rbt)))))
 
 (define inner-fixup
   (lambda (rbt)
@@ -168,8 +173,7 @@
            (red? (left (left rbt))))
       (inner-fixup (rb-tree-rotate-right-1 rbt)))
      ((root? rbt) rbt)
-     (else
-      (inner-fixup (parent rbt))))))
+     (else (inner-fixup (parent rbt))))))
 
 (define color-flip!
   (lambda (n)

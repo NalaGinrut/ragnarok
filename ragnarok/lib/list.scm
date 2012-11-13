@@ -14,13 +14,12 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok lib list)
+  #:use-module (ragnarok utils)
+  #:use-module (ice-9 threads)
   #:use-module (ice-9 q)
   #:use-module (oop goops))
 
 (module-export-all! (current-module))
-
-(define (list->q l) (cons l (last-pair l)))
-(define (q->list q) (car q))
 
 (define-class <mmr-list> ()
   (priv #:init-thunk make-q #:getter priv #:setter priv!) 

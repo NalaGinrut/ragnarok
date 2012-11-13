@@ -326,4 +326,6 @@
 (define-macro (call-with-return thunk) 
   `(call/cc (lambda (return) (,thunk))))
 
+(define (list->q l) (cons l (last-pair l)))
+(define (q->list q) (car q))
 
