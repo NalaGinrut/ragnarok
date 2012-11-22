@@ -20,16 +20,15 @@
   #:autoload (rnrs io ports) (get-bytevector-all get-string-all)
   #:autoload (rnrs) (enum-set-indexer)
   #:autoload (rnrs base) (assert)
-  #:use-module (srfi srfi-19)
+  #:use-module (ragnarok lib time)
+  #:use-module (ragnarok lib list)
+  #:use-module (ragnarok lib tree)
   #:use-module (ice-9 threads)
-  #:use-module (ice-9 regex)
-  )
+  #:use-module (ice-9 regex))
 
 (module-export-all! (current-module))
 
 (dynamic-call "init_lib" (dynamic-link "libragnarok"))
-
-(define write-date (@@ (web http) write-date))
 
 (define-syntax get-errno
   (syntax-rules (jumpkey withkey)
@@ -47,50 +46,15 @@
 
 (define touch 
   (lambda (file)
-    (close (open file O_CREAT))
-    ))
+    (close (open file O_CREAT))))
 
 (define port-add-flags
   (lambda (port flags)
-    (fcntl port F_SETFL (logior (fcntl port F_GETFL) flags))
-    ))
+    (fcntl port F_SETFL (logior (fcntl port F_GETFL) flags))))
 
 (define set-port-non-block!
   (lambda (port)
-    (port-add-flags port O_NONBLOCK)
-    ))
-
-(define ->global-time
-  (lambda (t)
-    ;; The old way to call strftime is obsolete for not using locale purpose.
-    ;;(strftime "%a, %d %b %Y %T %Z" (gmtime t))    
-    (call-with-output-string 
-     (lambda (port)
-       ;; NOTE: (time-utc->data t 0) to get global UTC time.
-       (write-date (time-utc->date (make-time time-utc 0 t) 0) port)))))
-
-(define ->local-time
-  (lambda (t)
-    ;; The old way to call strftime is obsolete for not using locale purpose.
-    ;;(strftime "%a, %d %b %Y %T %Z" (localtime t))
-    (call-with-output-string 
-     (lambda (port)
-       ;; NOTE: (time-utc->data t) to get local time.
-       (write-date (time-utc->date (make-time time-utc 0 t)) port)))))
-
-(define (get-global-current-time)
-  ;; The old way to call strftime is obsolete for not using locale purpose.
-  ;;(strftime "%a, %d %b %Y %T %Z" (gmtime (current-time ))))
-  (call-with-output-string 
-   (lambda (port)
-     ;; NOTE: (time-utc->data t) to get local time.
-     (write-date (time-utc->date (current-time) 0) port))))
-
-(define get-modified-time-str
-  (lambda (mt)
-    ;; The old way to call strftime is obsolete for not using locale purpose.
-    ;;(strftime "%Y-%b-%d %H:%I" (localtime mt))))
-    (->local-time mt)))
+    (port-add-flags port O_NONBLOCK)))
 
 (define search-from-list
   (lambda (l e)
@@ -103,9 +67,7 @@
 	     ((equal? (car ll) e)
 	      (return n))
 	     (else
-	      (lp (cdr ll) (1+ n))
-	      )))))
-       ))
+	      (lp (cdr ll) (1+ n)))))))))
 
 (define list-has? search-from-list)
 
@@ -118,16 +80,14 @@
   (syntax-rules ()
     ((_ str . opt)
      (let ([i (space-skip str . opt)])
-       (substring/shared str i (string-contains str " " (1+ i))))
-     ))) 
+       (substring/shared str i (string-contains str " " (1+ i))))))) 
 
 (define-syntax get-word-list
   (syntax-rules ()
     ((_ str)
      (map string-trim-both (string-split str #\space)))
     ((_ str ch)
-     (map string-trim-both (string-split str ch)))
-    ))
+     (map string-trim-both (string-split str ch)))))
 
 (define make-iterator
   (lambda (ll)
@@ -135,8 +95,7 @@
       (lambda ()
 	(let ((now (car rest)))
 	  (set! rest (cdr rest))
-	  now
-	  )))))
+	  now)))))
 
 (define make-counter
   (lambda ()
@@ -148,16 +107,14 @@
 	      ((init) (set! old 0))
 	      ((now) old)
 	      (else
-	       (error make-counter "invalid op ~a!~%" (car op))
-	       )))))))
+	       (error make-counter "invalid op ~a!~%" (car op)))))))))
 
 (define-syntax exchange
   (syntax-rules ()
     ((_ a b)
      (call-with-values 
 	 (lambda () (values b a)) 
-       (lambda (x y) (set! a x) (set! b y))
-       ))))
+       (lambda (x y) (set! a x) (set! b y))))))
 
 (define-syntax get-arg
   (syntax-rules ()
@@ -179,15 +136,13 @@
   (syntax-rules ()
     ((_ a k)
      (set! a
-	   (apply assoc-remove! a k)))
-    ))
+	   (apply assoc-remove! a k)))))
 	   
 (define-syntax get-file-ext		  
   (syntax-rules ()
     ((_ filename)
      (substring/shared filename
-		       (1+ (string-index-right filename #\.)))
-     )))
+		       (1+ (string-index-right filename #\.))))))
 
 (define-syntax get-request-mime
   (syntax-rules ()
@@ -196,8 +151,7 @@
 	 (if (file-is-directory? filename)
 	     '*directory*
 	     (string->symbol (get-file-ext filename)))
-	 '*no-such-file*
-	 ))))
+	 '*no-such-file*))))
 
 ;; Iff k and base has same sign, result is non-negative. Vice versa.
 ;; This function is twice faster than (string->number (object->string n) base)
@@ -209,8 +163,7 @@
 	   [neg1 (not (and (negative? k) (negative? base)))] 
 	   [neg (and neg0 neg1)]
 	   [k (abs k)]
-	   [base (abs base)]
-	   )
+	   [base (abs base)])
 
       (let lp ((n k) (result 0) (i 1))
 	(call-with-values 
@@ -219,8 +172,9 @@
 	    (let ([ret (+ result (* y i))])
 	      (if (> x 0) 
 		  (lp x ret (* i 10))
-		  (if neg (- ret) ret))))))
-      )))
+		  (if neg 
+		      (- ret) 
+		      ret)))))))))
 
 ;; FIXME: it's very slow, enhance it!
 (define check-permits
@@ -239,8 +193,7 @@
       ((u+w) (not (zero? (logand perms #o200))))
       ((u+x) (not (zero? (logand perms #o100))))
       (else
-       (error check-permits "Invalid mode!" mode))
-      )))
+       (error check-permits "Invalid mode!" mode)))))
 
 (define-syntax make-perms-seeds
   (syntax-rules ()
@@ -326,6 +279,4 @@
 (define-macro (call-with-return thunk) 
   `(call/cc (lambda (return) (,thunk))))
 
-(define (list->q l) (cons l (last-pair l)))
-(define (q->list q) (car q))
 

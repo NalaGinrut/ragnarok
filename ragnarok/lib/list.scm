@@ -14,17 +14,35 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (ragnarok lib list)
-  #:use-module (ragnarok utils)
   #:use-module (ice-9 threads)
   #:use-module (ice-9 q)
   #:use-module (oop goops))
 
 (module-export-all! (current-module))
 
+(define (list->q l) (cons l (last-pair l)))
+(define (q->list q) (car q))
+
 (define-class <mmr-list> ()
   (priv #:init-thunk make-q #:getter priv #:setter priv!) 
   (count #:init-value 0 #:getter count #:setter count!)
   (mutex #:init-thunk make-mutex #:getter mutex))
+
+(define-method (search (self <mmr-list>) elem)
+  (let ((l (q->list (priv self))))
+    (call/cc
+     (lambda (return)
+       (let lp ((ll l) (n 0))
+	 (cond
+	  ((null? ll)
+	   (return #f))
+	  ((equal? (car ll) elem)
+	   (return n))
+	  (else
+	   (lp (cdr ll) (1+ n)))))))))
+
+(define-method (has? (self <mmr-list>) elem)
+  (search self elem))
 
 (define-method (insert-from-list! (self <mmr-list>) (ll <list>))
   (priv! self (list->q ll))
