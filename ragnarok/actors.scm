@@ -39,25 +39,51 @@
   (lambda (capacity)
     (if capacity
 	(make <mmr-queue>)
-	(make <mmr-queue>) ;; FIXME: implement a limited queue
-	)))
+	(make <mmr-limit-queue> #:limit capacity))))
+
+(define mail-box-in!
+  (lambda (mbox msg)
+    (in mbox msg)))
+
+(define mail-box-out!
+  (lambda (mbox)
+    (out mbox)))
 
 (define-syntax !
   (syntax-rules (<= :)
-    ((_ actor2 <= actor1 : msg)
-     ((actor1) self msg actor1))))
+    ((_ to <= from : msg)
+     (begin 
+       (to from msg)
+       (abort)))))
 
-(define* (make-actor director #:key (name (gensym "actor-")) (capacity #f))
-  (let ((mail-box (make-mail-box capacity)))
-    (lambda (self msg from)
-      (reset
-       (let lp()
-	 (case (mail-box-out! mail-box)
-	   ((run) (shift k (k (! director <= self 'wake-up))))
-	   ((sleep) (shift k (k (! director <= self 'stun-me))))
-	   ((send) (shift k (k (mail-box-in! (cons from msg)))))
-	   ;; TODO: other msg handler
-	   (else (error "wrong msg"))))))))
+;; 1. Not all actors need work/sleep queue, so we just make it when we need
+;; 2. But consider the recycling of actors, we still provide 'add' methods for these queues
+(define* (make-actor director #:key (name (gensym "actor-")) 
+		     (box-room 100) (work-queue #f) (sleep-queue #f)
+		     (boss #f))
+  (let ((mail-box (make-mail-box box-room)))
+    (lambda (self from . msg)
+      (let lp((m (cadr (mail-box-out! mail-box))))
+	(cond
+	 ((not m) (! director <= self 'stun-me 1)) ;; no msg, sleep 1s
+	 (boss
+	  (case m
+	    ((sleep block) (error "boss never sleep/block!" m))
+	    ((run) (error "boss is working, go back to work!" m))
+	    ((yield) (lp (mail-box-out! mail-box))))) ;; boss never yield, keep working
+	 (else
+	  (match m
+	    (run (! director <= self 'wake-up))
+	    (sleep (! director <= self 'stun-me))
+	    (block (! director <= self 'block-me))
+	    (send (mail-box-in! (cons from msg)))
+	    (yield (and work-queue (work-queue-in! from))) 
+	    (`(add-work-queue ,wq) (set! work-queue wq))
+	    (`(add-sleep-queue ,sq) (set! sleep-queue sq))
+	    ;; TODO: other msg handler
+	    (else (error "wrong msg")))
+	    (! director <= self 'yield) ;; yield
+	    (lp (mail-box-out! mail-box)))))))))))
 		   
 
 (define* (make-scenario GOD #:key (name (gensym "scenario-")))

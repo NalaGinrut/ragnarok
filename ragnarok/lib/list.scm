@@ -77,7 +77,8 @@
 
 (define-method (to-head! (self <mmr-list>) elem)
   (q-push! (priv self) elem)
-  (count++! self))
+  (count++! self)
+  elem)
 
 ;; NOTE: enq! won't traverse the whole list. It actually stored the pointer to the last cell.
 ;; ((1 2 3) 3), in this example, cdr 3 is not a simple number, it's the pointer of last cell of '(1 2 3)
@@ -85,7 +86,8 @@
 ;;       |==|
 (define-method (to-tail! (self <mmr-list>) elem)
   (enq! (priv self) elem)
-  (count++! self))
+  (count++! self)
+  elem)
 
 (define-method (head-out! (self <mmr-list>))
   (if (empty? self)
@@ -112,6 +114,14 @@
 (define-method (out (self <mmr-queue>))
   (head-out! self))
 
+(define-class <mmr-limit-queue> (<mmr-queue>)
+  (limit #:init-keyword #:limit #:getter limit))
+
+(define-method (in (self <mmr-limit-queue>) elem)
+  (if (= (count self) (limit self))
+      #f
+      (to-tail! self elem)))
+
 ;;-------- stack
 (define-class <mmr-stack> (<mmr-list>))
 
@@ -124,5 +134,12 @@
 (define-method (pop (self <mmr-stack>))
   (head-out! self))
 
+(define-class <mmr-limit-stack> (<mmr-stack>)
+  (limit #:init-keyword #:limit #:getter limit))
+
+(define-method (in (self <mmr-limit-stack>) elem)
+  (if (= (count self) (limit self))
+      #f
+      (to-tail! self elem)))
 
 
