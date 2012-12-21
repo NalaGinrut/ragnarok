@@ -16,6 +16,8 @@
 (define-module (ragnarok lib list)
   #:use-module (ice-9 threads)
   #:use-module (ice-9 q)
+  #:use-module (ice-9 control)
+  #:use-module ((srfi srfi-1) #:select (alist-delete!))
   #:use-module (oop goops))
 
 (module-export-all! (current-module))
@@ -27,6 +29,10 @@
   (priv #:init-thunk make-q #:getter priv #:setter priv!) 
   (count #:init-value 0 #:getter count #:setter count!)
   (mutex #:init-thunk make-mutex #:getter mutex))
+
+(define-method (clear! (self <mmr-list>))
+  (priv! self (make-q))
+  (count! self 0))
 
 (define-method (search (self <mmr-list>) elem)
   (let ((l (q->list (priv self))))
@@ -40,6 +46,11 @@
 	   (return n))
 	  (else
 	   (lp (cdr ll) (1+ n)))))))))
+
+(define-method (drop! (self <mmr-list>) elem)
+  (let* ((l (q->list (priv self)))
+	 (nl (alist-delete! l elem eq?)))
+    (priv! self (list->q nl))))
 
 (define-method (has? (self <mmr-list>) elem)
   (search self elem))
