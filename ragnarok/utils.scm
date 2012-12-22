@@ -24,11 +24,23 @@
   #:use-module (ragnarok lib list)
   #:use-module (ragnarok lib tree)
   #:use-module (ice-9 threads)
+  #:use-module (ice-9 control)
   #:use-module (ice-9 regex))
 
 (module-export-all! (current-module))
 
 (dynamic-call "init_lib" (dynamic-link "libragnarok"))
+
+(define (make-amb) 
+  (let ((amb-backtrack (lambda (x) 
+			 (display "end\n"))))
+    (lambda args 
+      (reset (shift return 
+		    (let ((backtrack amb-backtrack)) 
+		      (map (lambda (x) 
+			     (shift k (set! amb-backtrack k) (return x)))
+			   args)
+		      (backtrack 'fail)))))))
 
 (define-syntax get-errno
   (syntax-rules (jumpkey withkey)
