@@ -95,21 +95,21 @@
 	 (else
 	  (let ((sender (car msg)) (m (cadr msg)))
 	    (match m
-	      (send (mail-box-in! (cons from new-msg)))
+	      ('send (mail-box-in! (cons from new-msg)))
 	      (`(spawn ,name ,script ,director) 
 	       (let ((actor (if fq (queue-out! fq) (error name "no a boss"))))
 		 (if actor
 		     (! actor <= director : `(attr-set! ,(list (name ,name) (script ,script) (director ,director))))
 		     (new-actor name script director))))
-	      (run (set! status 'ready) (! director <= self : 'wake-up))
+	      ('run (set! status 'ready) (! director <= self : 'wake-up))
 	      (`(sleep ,time) 
 	       (set! status 'sleep)
 	       (set! sleep-time time)
 	       (set! start-sleep (current-time))
 	       (! director <= self : 'stun-me))
-	      (block (set! status 'blocked) (! director <= self : 'block-me))
-	      (yield (set! status 'ready) (! director <= self : 'schedule-me))
-	      (release (set! status 'free) 
+	      ('block (set! status 'blocked) (! director <= self : 'block-me))
+	      ('yield (set! status 'ready) (! director <= self : 'schedule-me))
+	      ('release (set! status 'free) 
 		       (for-each clear! (list mail-box wq sq bq)) 
 		       (! director <= self : 'free-me))
 	      (`(attr-set! ,kv-pairs)
@@ -156,15 +156,17 @@
 
 (define-syntax script-wrapper
   (syntax-rules ()
-    ((_ patterns)
+    ((_ pattern patterns* ...)
      (lambda (script self director from msg)
        (cond
 	((not msg) (error "invalid message" msg))
 	(else
 	 (match (msg-content m)
-	   patterns
-	   (resend 'ignore) ;; default resend handler
-	   (dead 'ignore) ;; default dead handler
+	   pattern
+	   patterns*
+	   ...
+	   ('resend 'ignore) ;; default resend handler
+	   ('dead 'ignore) ;; default dead handler
 	   (else (error "invalid pattern" m)))))))))
 
 (define* (spawn #:key (name (gensym "actor-")) (script #f) (director #f) (workers 10))
