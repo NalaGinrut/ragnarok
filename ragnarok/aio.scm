@@ -16,6 +16,7 @@
 (define-module (ragnarok aio)
   #:use-module (ragnarok utils)
   #:use-module (ragnarok error)
+  #:use-module (ice-9 control)
   #:autoload (rnrs io ports) (put-bytevector
 			      get-bytevector-n
 			      call-with-bytevector-output-port)
@@ -52,7 +53,7 @@
 	    (let ([E (get-errno e)])
 	      (cond
 	       ((or (= E EAGAIN) (= E EWOULDBLOCK)) 
-		(yield))
+		(abort)) ;; return delimited-continuation
 	       ((= E EINTR)
 		(error "aio read was interrupted by user!"))
 	       (else
@@ -89,7 +90,7 @@
 	       (cond
 		((or (= E EAGAIN) (= E EWOULDBLOCK))
 		 (force-output port)
-		 (yield)) 
+		 (abort)) ;; return delimited continuation
 		((= E EINTR)
 		 (error "aio write was interrupted by user!"))
 		(else
