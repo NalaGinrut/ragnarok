@@ -34,6 +34,8 @@ The notable features listed here:
 == Quick start
 
 Note: now you have to try v0.0.3 since master is working on progress and may not run successfully.
+Be sure you have the latest Guile-2.x, because Ragnarok is an experimental and cutting edge project. Any newest/cool feature could be used.
+The policy is agressive, but it's the way to get best design IMO.
 
 1. git clone git://github.com/NalaGinrut/ragnarok.git
 2. git checkout v0.0.3 
