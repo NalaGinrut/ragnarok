@@ -2,7 +2,7 @@ Ragnarok
 ========
 
 Ragnarok is generic server which aimed to be a multi-protocols and high performance concurrency server framework.  
-It's core written with C language, and use GNU Guile, the GNU official extension language for extensional part.
+Its core written with C language, and use GNU Guile, the GNU official extension language for extensional part.
 
 With Guile's multi-language features, it may support most of the main-stream languages in the long term, which means
 you don't have to rewrite your program to get full performance of Guile.
