@@ -2,6 +2,7 @@ Ragnarok
 ========
 
 Ragnarok is a generic server written with GNU Guile. 
+
 The notable features listed here:
 *  Unified epoll/select/kqueue interface
 *  Concurrency based on threads
@@ -21,3 +22,28 @@ The notable features listed here:
 *  Static page and binary downloading service (of course) 
 
 == Quick start
+
+Note: now you have to try v0.0.3 since master is working on progress and may not run successfully.
+1. git clone git@github.com:NalaGinrut/ragnarok.git
+2. git checkout v0.0.3 
+3. ./configure
+4. make 
+5. sudo make install
+6. You may checkout /etc/ragnarok/server.conf to see the config file.
+
+=== config file ===
++[http0] {
+root-path : /var/www
+protocol : http
+status-show : log
+max-request : 100000
+listen : 8080
+charset : utf-8
+with-cgi : gl,scm
+cgi : yes
+}
+===================
+
+More details please review Wiki (coming soon).
+
+Happy hacking!
