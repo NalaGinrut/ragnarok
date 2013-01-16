@@ -10,7 +10,7 @@ you don't have to rewrite your program to get full performance of Guile.
 Besides, Guile has the fine-intergrated delimited-continuation in its language core. It can be used for handling async-IO easily.
 This feature (provided in language core) only supported by Scala/Ocaml/Haskell/Scheme45, and Guile (of course).
 
-The last but not the least, Guile as Scheme is suitable for Actors-model since it was implemented by the idea to implement Actors.
+The last but not the least, Guile as Scheme is suitable for Actors-model since it was born by the idea to implement Actors.
 And the most expectation is the Actors-model based on delimited-continuation could provide more performance with async-IO.
 
 The notable features listed here:
