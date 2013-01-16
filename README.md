@@ -41,6 +41,10 @@ Note: now you have to try v0.0.3 since master is working on progress and may not
 4. make 
 5. sudo make install
 6. You may checkout /etc/ragnarok/server.conf to see the config file.
+7. sudo ragnarok (you do need the authority to boot a server)
+8. checkout 8080 port (or at you wish) in your browser
+9. enjoy if you're lucky, or add comments or send mail to me, thanks!
+
 
 === config file ===
 ``` js
