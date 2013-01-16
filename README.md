@@ -19,7 +19,7 @@ The notable features listed here:
 *  High performance concurrency with delimited-continuation based Actors-model (work in progress)
 *  Object oriented 
    (yes, I'm the minority in Guile community who try to program with GOOPS, though FP features may cancel out most of OO features)
-*  HTTP/1.1
+*  HTTP/1.1 (partial)
 *  Multi-protocols
 *  Multi-languages
    (Guile is actually a dynamic compiler collection against the GCC who's the static one according to Andy's free speech. So multi-language must be the most fascinating feature.)
@@ -38,9 +38,9 @@ Note: now you have to try v0.0.3 since master is working on progress and may not
 Be sure you have the latest Guile-2.x, because Ragnarok is an experimental and cutting edge project. Any newest/cool feature could be used.
 The policy is agressive, but it's the way to get best design IMO.
 
-1. git clone git://github.com/NalaGinrut/ragnarok.git
+1. git clone git://github.com/NalaGinrut/ragnarok.git && cd ragnarok
 2. git checkout v0.0.3 
-3. ./configure
+3. ./autogen.sh && ./configure
 4. make 
 5. sudo make install
 6. You may checkout /etc/ragnarok/server.conf to see the config file.
